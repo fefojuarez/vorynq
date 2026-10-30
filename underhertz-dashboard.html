@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNDERHERTZ — Dashboard Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08080E;--surface:#111118;--surface2:#1A1A24;--border:rgba(255,255,255,0.07);--blue:#0055FF;--blue-light:#3377FF;--cyan:#00DDFF;--green:#00CC66;--red:#FF2244;--orange:#FF8800;--white:#F0F0F0;--gray:#555566;--gray-light:#888899;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-height:100vh;}
+#pinScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9000;}
+.pin-box{background:var(--surface);border:1px solid rgba(0,85,255,0.3);width:min(320px,92vw);overflow:hidden;}
+.pin-top{background:var(--blue);padding:18px 24px;text-align:center;}
+.pin-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:5px;}
+.pin-sub{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;opacity:0.8;margin-top:3px;}
+.pin-body{padding:24px;}
+.pin-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;display:block;margin-bottom:12px;text-align:center;}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:16px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border);transition:background 0.15s;}
+.pin-dot.filled{background:var(--blue);}
+.pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.pin-key{background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:14px;font-family:'Bebas Neue',sans-serif;font-size:22px;cursor:pointer;text-align:center;transition:all 0.15s;user-select:none;}
+.pin-key:hover{border-color:var(--blue);}
+.pin-key:active{transform:scale(0.93);}
+.pin-key.del{color:var(--red);font-size:18px;}
+.pin-key.enter{background:var(--blue);border-color:var(--blue);grid-column:span 2;}
+.pin-error{font-family:'DM Mono',monospace;font-size:10px;color:var(--red);text-align:center;margin-top:10px;letter-spacing:1px;min-height:16px;}
+#dashboard{display:none;}
+.top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.top-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:5px;}
+.top-logo span{color:var(--blue-light);}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--green);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.top-time{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray-light);}
+.body{padding:16px 20px 48px;max-width:1100px;margin:0 auto;}
+.hero-stats{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:20px;margin-top:14px;}
+.hstat{background:var(--surface);border:1px solid var(--border);padding:18px 22px;position:relative;overflow:hidden;}
+.hstat.main{border-color:rgba(0,85,255,0.4);background:rgba(0,85,255,0.06);}
+.hstat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.hstat.main::before{background:var(--blue);}
+.hstat.g::before{background:var(--green);}
+.hstat.o::before{background:var(--orange);}
+.hstat.c::before{background:var(--cyan);}
+.hstat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;margin-bottom:8px;}
+.hstat-val{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,3.5vw,40px);letter-spacing:2px;line-height:1;}
+.hstat-val.g{color:var(--green);}
+.hstat-val.o{color:var(--orange);}
+.hstat-val.c{color:var(--cyan);}
+.hstat-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);letter-spacing:1px;margin-top:4px;}
+.section{margin-bottom:20px;}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:3px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,85,255,0.3),transparent);}
+.barras-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.barra-card{background:var(--surface);border:1px solid var(--border);padding:16px 18px;}
+.barra-card-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.barra-name{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;}
+.barra-pct{font-family:'DM Mono',monospace;font-size:10px;color:var(--blue-light);}
+.barra-total{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;color:var(--green);margin-bottom:8px;}
+.barra-bar-track{height:3px;background:rgba(255,255,255,0.06);margin-bottom:7px;}
+.barra-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width 0.8s ease;}
+.barra-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);letter-spacing:1px;margin-bottom:7px;}
+.methods-row{display:flex;flex-wrap:wrap;gap:4px;}
+.method-tag{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--cyan);background:rgba(0,221,255,0.08);border:1px solid rgba(0,221,255,0.15);padding:2px 7px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.feed-list,.retiros-box{background:var(--surface);border:1px solid var(--border);max-height:360px;overflow-y:auto;}
+.feed-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);}
+.feed-item:last-child{border-bottom:none;}
+.feed-item.org{background:rgba(255,136,0,0.04);}
+.feed-barra{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--blue-light);text-transform:uppercase;margin-bottom:2px;}
+.feed-items{font-size:12px;color:var(--gray-light);}
+.feed-right{text-align:right;flex-shrink:0;}
+.feed-amount{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--green);}
+.feed-amount.org-amount{color:var(--orange);font-size:13px;}
+.feed-time{font-family:'DM Mono',monospace;font-size:8px;color:var(--gray);letter-spacing:1px;}
+.retiro-item{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);}
+.retiro-item:last-child{border-bottom:none;}
+.retiro-nombre{font-weight:700;font-size:13px;margin-bottom:2px;}
+.retiro-meta{font-family:'DM Mono',monospace;font-size:8px;color:var(--gray-light);letter-spacing:1px;}
+.retiro-monto{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--red);flex-shrink:0;}
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;}
+.stock-card{background:var(--surface);border:1px solid var(--border);padding:12px 14px;display:flex;gap:10px;align-items:center;}
+.stock-card.critical{border-color:rgba(255,34,68,0.4);background:rgba(255,34,68,0.04);}
+.stock-card.low{border-color:rgba(255,136,0,0.3);}
+.stock-emoji{font-size:26px;flex-shrink:0;}
+.stock-info{flex:1;min-width:0;}
+.stock-name{font-weight:700;font-size:12px;margin-bottom:2px;}
+.stock-nums{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:4px;}
+.stock-track{height:3px;background:rgba(255,255,255,0.06);margin-bottom:4px;}
+.stock-fill{height:100%;transition:width 0.6s ease;}
+.stock-fill.ok{background:var(--green);}
+.stock-fill.low{background:var(--orange);}
+.stock-fill.critical{background:var(--red);}
+.stock-meta{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:8px;color:var(--gray-light);letter-spacing:1px;}
+.stock-status.ok{color:var(--green);}
+.stock-status.low{color:var(--orange);}
+.stock-status.critical{color:var(--red);}
+.mgmt-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border:1px solid var(--border);margin-bottom:6px;}
+.mgmt-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;margin-bottom:2px;}
+.mgmt-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);letter-spacing:1px;}
+.del-btn{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:var(--red);padding:8px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
+.del-btn:hover{background:var(--red);color:white;}
+.reset-btn{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:var(--red);padding:10px 20px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;margin-top:10px;display:inline-block;}
+.reset-btn:hover{background:var(--red);color:white;}
+.no-data{padding:20px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--gray);letter-spacing:2px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;z-index:9999;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;background:var(--blue);color:white;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.green{background:var(--green);color:#001a00;}
+.toast.red{background:var(--red);}
+@media(max-width:768px){.hero-stats{grid-template-columns:1fr 1fr;}.hstat.main{grid-column:span 2;}.two-col{grid-template-columns:1fr;}.body{padding:12px 12px 40px;}}
+</style>
+</head>
+<body>
+
+<div id="pinScreen">
+  <div class="pin-box">
+    <div class="pin-top"><div class="pin-logo">UNDERHERTZ</div><div class="pin-sub">DASHBOARD ORGANIZADORES</div></div>
+    <div class="pin-body">
+      <span class="pin-label">PIN de administrador</span>
+      <div class="pin-dots"><div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div></div>
+      <div class="pin-numpad">
+        <div class="pin-key" onclick="pk('1')">1</div><div class="pin-key" onclick="pk('2')">2</div><div class="pin-key" onclick="pk('3')">3</div>
+        <div class="pin-key" onclick="pk('4')">4</div><div class="pin-key" onclick="pk('5')">5</div><div class="pin-key" onclick="pk('6')">6</div>
+        <div class="pin-key" onclick="pk('7')">7</div><div class="pin-key" onclick="pk('8')">8</div><div class="pin-key" onclick="pk('9')">9</div>
+        <div class="pin-key del" onclick="pd()">⌫</div><div class="pin-key" onclick="pk('0')">0</div><div class="pin-key enter" onclick="pc()">ENTRAR</div>
+      </div>
+      <div class="pin-error" id="pinErr"></div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="top-logo">UNDER<span>HERTZ</span></div>
+    <div class="live-badge"><div class="live-dot"></div>EN VIVO</div>
+    <div class="top-time" id="lastUpdate">Conectando...</div>
+  </div>
+  <div class="body">
+    <div class="hero-stats">
+      <div class="hstat main"><div class="hstat-label">Total recaudado</div><div class="hstat-val g" id="grandTotal">$0</div><div class="hstat-sub">todas las barras</div></div>
+      <div class="hstat g"><div class="hstat-label">Ventas</div><div class="hstat-val g" id="totalVentas">0</div><div class="hstat-sub">transacciones</div></div>
+      <div class="hstat o"><div class="hstat-label">Retiros</div><div class="hstat-val o" id="totalRetiros">$0</div><div class="hstat-sub">del efectivo</div></div>
+      <div class="hstat c"><div class="hstat-label">Consumos org.</div><div class="hstat-val c" id="totalOrg">0</div><div class="hstat-sub">sin cargo</div></div>
+    </div>
+    <div class="section"><div class="sec-title">💰 Recaudación por barra</div><div class="barras-grid" id="barrasGrid"><div class="no-data">Esperando datos...</div></div></div>
+    <div class="two-col">
+      <div class="section"><div class="sec-title">🧾 Últimas ventas</div><div class="feed-list" id="salesFeed"><div class="no-data">Sin ventas aún</div></div></div>
+      <div class="section"><div class="sec-title">💸 Retiros de caja</div><div class="retiros-box" id="retirosList"><div class="no-data">Sin retiros</div></div></div>
+    </div>
+    <div class="section"><div class="sec-title">📦 Stock en tiempo real</div><div class="stock-grid" id="stockGrid"><div class="no-data">Cargando...</div></div></div>
+    <div class="section">
+      <div class="sec-title">🖥 Gestión de barras</div>
+      <div id="barrasMgmt"><div class="no-data">Cargando...</div></div>
+      <button class="reset-btn" id="resetBtn">🔄 RESETEAR NOCHE COMPLETA</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- PIN script (normal, no module) -->
+<script>
+let buf='';
+function pk(n){if(buf.length>=4)return;buf+=n;upd();if(buf.length===4)setTimeout(pc,200);}
+function pd(){buf=buf.slice(0,-1);upd();document.getElementById('pinErr').textContent='';}
+function upd(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<buf.length);}
+function pc(){
+  const saved=JSON.parse(localStorage.getItem('uh_pins')||'{}');
+  const adminPin=saved.admin||'0000';
+  if(buf===adminPin){
+    document.getElementById('pinScreen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+  } else {
+    document.getElementById('pinErr').textContent='PIN INCORRECTO — INTENTÁ DE NUEVO';
+    buf='';upd();
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('pinScreen').style.display!=='none'){
+    if(e.key>='0'&&e.key<='9')pk(e.key);
+    else if(e.key==='Backspace')pd();
+    else if(e.key==='Enter')pc();
+  }
+});
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+
+<!-- Firebase module script - ALL firebase logic here -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, onValue, remove, set }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDhVEKeqhvVMrqShoRVSy2f0eb8W_c9hj4",
+  authDomain: "barra-underhertz.firebaseapp.com",
+  databaseURL: "https://barra-underhertz-default-rtdb.firebaseio.com",
+  projectId: "barra-underhertz",
+  storageBucket: "barra-underhertz.firebasestorage.app",
+  messagingSenderId: "716266397341",
+  appId: "1:716266397341:web:c9d3b9b5a1ba45937e3e74"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const fmt = n => '$'+(n||0).toLocaleString('es-AR');
+
+// ── SALES ──
+onValue(ref(db,'underhertz/sales'), snap => {
+  const sales = Object.values(snap.val()||{});
+  const barras = {};
+  sales.forEach(s => {
+    if(!s.organizer){
+      if(!barras[s.barra])barras[s.barra]={total:0,count:0,byMethod:{}};
+      barras[s.barra].total+=s.total||0;
+      barras[s.barra].count++;
+      const m=s.paymentMethod||'efectivo';
+      barras[s.barra].byMethod[m]=(barras[s.barra].byMethod[m]||0)+(s.total||0);
+    }
+  });
+  const grandTotal=Object.values(barras).reduce((a,b)=>a+b.total,0);
+  document.getElementById('grandTotal').textContent=fmt(grandTotal);
+  document.getElementById('totalVentas').textContent=sales.filter(s=>!s.organizer).length;
+  document.getElementById('totalOrg').textContent=sales.filter(s=>s.organizer).length;
+
+  const el=document.getElementById('barrasGrid');
+  if(!Object.keys(barras).length){el.innerHTML='<div class="no-data">Sin ventas registradas aún</div>';}
+  else{
+    el.innerHTML=Object.entries(barras).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>{
+      const pct=grandTotal>0?Math.round(d.total/grandTotal*100):0;
+      const methods=Object.entries(d.byMethod).map(([m,v])=>`<span class="method-tag">${m}: ${fmt(v)}</span>`).join('');
+      return `<div class="barra-card"><div class="barra-card-top"><div class="barra-name">${name}</div><div class="barra-pct">${pct}%</div></div><div class="barra-total">${fmt(d.total)}</div><div class="barra-bar-track"><div class="barra-bar-fill" style="width:${pct}%"></div></div><div class="barra-meta">${d.count} ventas</div><div class="methods-row">${methods}</div></div>`;
+    }).join('');
+  }
+
+  const feed=document.getElementById('salesFeed');
+  const recent=[...sales].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp)).slice(0,25);
+  if(!recent.length){feed.innerHTML='<div class="no-data">Sin ventas aún</div>';}
+  else{
+    feed.innerHTML=recent.map(s=>{
+      const items=(s.items||[]).map(i=>`${i.emoji||''} ${i.name} x${i.qty}`).join(', ');
+      const isOrg=!!s.organizer;
+      return `<div class="feed-item ${isOrg?'org':''}"><div><div class="feed-barra">${s.barra||'—'}</div><div class="feed-items">${items}</div></div><div class="feed-right"><div class="feed-amount ${isOrg?'org-amount':''}">${isOrg?'ORG':fmt(s.total)}</div><div class="feed-time">${s.time||''} · ${s.paymentMethod||''}</div></div></div>`;
+    }).join('');
+  }
+  document.getElementById('lastUpdate').textContent='Actualizado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+});
+
+// ── RETIROS ──
+onValue(ref(db,'underhertz/retiros'), snap=>{
+  const retiros=Object.values(snap.val()||{});
+  document.getElementById('totalRetiros').textContent=fmt(retiros.reduce((s,r)=>s+(r.monto||0),0));
+  const el=document.getElementById('retirosList');
+  if(!retiros.length){el.innerHTML='<div class="no-data">Sin retiros</div>';return;}
+  el.innerHTML=[...retiros].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
+    .map(r=>`<div class="retiro-item"><div><div class="retiro-nombre">${r.nombre}</div><div class="retiro-meta">${r.barra} · ${r.time}${r.nota?' · '+r.nota:''}</div></div><div class="retiro-monto">${fmt(r.monto)}</div></div>`).join('');
+});
+
+// ── STOCK ──
+onValue(ref(db,'underhertz/products'), snap=>{
+  const products=Object.values(snap.val()||{});
+  const el=document.getElementById('stockGrid');
+  if(!products.length){el.innerHTML='<div class="no-data">Sin productos</div>';return;}
+  el.innerHTML=[...products].sort((a,b)=>(a.stock/Math.max(a.initialStock,1))-(b.stock/Math.max(b.initialStock,1)))
+    .map(p=>{
+      const pct=p.initialStock>0?Math.round(p.stock/p.initialStock*100):100;
+      const s=pct<=10?'critical':pct<=25?'low':'ok';
+      const label=pct<=10?'⚠ CRÍTICO':pct<=25?'↓ BAJO':'✓ OK';
+      return `<div class="stock-card ${s}"><div class="stock-emoji">${p.emoji||'📦'}</div><div class="stock-info"><div class="stock-name">${p.name}</div><div class="stock-nums">${p.stock} / ${p.initialStock}</div><div class="stock-track"><div class="stock-fill ${s}" style="width:${pct}%"></div></div><div class="stock-meta"><span class="stock-status ${s}">${label}</span><span>${p.initialStock-p.stock} vendidos</span></div></div></div>`;
+    }).join('');
+});
+
+// ── BARRAS ──
+onValue(ref(db,'underhertz/barras'), snap=>{
+  const data=snap.val()||{};
+  const entries=Object.entries(data);
+  const el=document.getElementById('barrasMgmt');
+  if(!entries.length){el.innerHTML='<div class="no-data">No hay barras activas registradas</div>';return;}
+  el.innerHTML=entries.sort((a,b)=>a[1].name.localeCompare(b[1].name))
+    .map(([key,b])=>`<div class="mgmt-row"><div><div class="mgmt-name">${b.name}</div><div class="mgmt-meta">Operador: ${b.operador||'—'} · Última conexión: ${b.lastSeen?new Date(b.lastSeen).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'—'}</div></div><button class="del-btn" data-key="${key}" data-name="${b.name}">🗑 ELIMINAR</button></div>`)
+    .join('');
+
+  // Attach delete listeners
+  el.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const key=btn.dataset.key;
+      const name=btn.dataset.name;
+      if(!confirm(`¿Eliminar la barra "${name}"?\n\nLas ventas quedan en el historial.`))return;
+      try{
+        await remove(ref(db,'underhertz/barras/'+key));
+        showToast('✓ BARRA ELIMINADA','green');
+      }catch(e){
+        showToast('⚠ ERROR: '+e.message,'');
+      }
+    });
+  });
+});
+
+// ── RESET ──
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('¿RESETEAR TODA LA NOCHE?\n\nEsto borra ventas, retiros y barras en TODAS las PCs.\nEl stock vuelve al inicial.\n\nNo se puede deshacer.'))return;
+  try{
+    await set(ref(db,'underhertz/sales'),null);
+    await set(ref(db,'underhertz/retiros'),null);
+    await set(ref(db,'underhertz/barras'),null);
+    // Reset stock
+    const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'underhertz/products'),s=>{u();res(s);});});
+    const products=productsSnap.val();
+    if(products){
+      const resetStock={};
+      Object.values(products).forEach(p=>{resetStock[p.id]=p.initialStock||p.stock;});
+      await set(ref(db,'underhertz/stock'),resetStock);
+    }
+    showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS','green');
+  }catch(e){
+    showToast('⚠ ERROR: '+e.message,'');
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>

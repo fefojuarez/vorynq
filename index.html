@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>UNDERHERTZ — Sistema de Barra</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+// ═══════════════════════════════════════════════
+// FIREBASE CONFIG — Reemplazá con tus datos
+// ═══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDhVEKeqhvVMrqShoRVSy2f0eb8W_c9hj4",
+  authDomain: "barra-underhertz.firebaseapp.com",
+  databaseURL: "https://barra-underhertz-default-rtdb.firebaseio.com",
+  projectId: "barra-underhertz",
+  storageBucket: "barra-underhertz.firebasestorage.app",
+  messagingSenderId: "716266397341",
+  appId: "1:716266397341:web:c9d3b9b5a1ba45937e3e74",
+  measurementId: "G-2SSJVNXZV8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window._db = db;
+window._ref = ref;
+window._set = set;
+window._get = get;
+window._onValue = onValue;
+window._update = update;
+window._push = push;
+window._serverTimestamp = serverTimestamp;
+window._firebaseReady = true;
+document.dispatchEvent(new Event('firebaseReady'));
+</script>
+
+<style>
+:root {
+  --bg: #08080E;
+  --surface: #111118;
+  --surface2: #1A1A24;
+  --border: rgba(255,255,255,0.07);
+  --blue: #0055FF;
+  --blue-light: #3377FF;
+  --cyan: #00DDFF;
+  --green: #00CC66;
+  --red: #FF2244;
+  --orange: #FF8800;
+  --yellow: #FFD600;
+  --white: #F0F0F0;
+  --gray: #555566;
+  --gray-light: #888899;
+  --sidebar-w: 340px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Syne', sans-serif;
+  display: flex; flex-direction: column;
+}
+
+/* ── SETUP SCREEN ── */
+#setupScreen {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  z-index:9000; flex-direction:column; gap:0;
+}
+.setup-box {
+  background: var(--surface);
+  border: 1px solid rgba(0,85,255,0.25);
+  width: min(480px, 94vw);
+  overflow: hidden;
+}
+.setup-top {
+  background: var(--blue);
+  padding: 20px 28px;
+}
+.setup-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px; letter-spacing: 5px;
+}
+.setup-subtitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  opacity: 0.8; margin-top: 4px;
+}
+.setup-body { padding: 28px; }
+.setup-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--gray-light); text-transform: uppercase;
+  display:block; margin-bottom:7px;
+}
+.setup-input, .setup-select {
+  width:100%; background:var(--bg);
+  border:1px solid rgba(0,85,255,0.2);
+  color:var(--white); padding:11px 14px;
+  font-family:'Syne',sans-serif; font-size:14px;
+  outline:none; margin-bottom:16px;
+  transition:border-color 0.2s;
+}
+.setup-input:focus, .setup-select:focus { border-color:var(--blue); }
+.setup-select option { background:var(--surface); }
+.setup-btn {
+  width:100%; background:var(--blue); color:white;
+  border:none; padding:14px;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:4px;
+  cursor:pointer; transition:background 0.2s;
+}
+.setup-btn:hover { background:#0044DD; }
+.firebase-note {
+  margin-top:16px; padding:12px 14px;
+  background:rgba(255,136,0,0.08);
+  border:1px solid rgba(255,136,0,0.2);
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--orange); letter-spacing:1px; line-height:1.7;
+}
+.firebase-note a { color:var(--cyan); }
+
+/* ── TOP BAR ── */
+#topBar {
+  height:52px; background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; flex-shrink:0; gap:12px;
+}
+.top-logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px; letter-spacing:4px; white-space:nowrap;
+}
+.top-logo span { color:var(--blue-light); }
+.top-barra {
+  font-family:'DM Mono',monospace;
+  font-size:10px; letter-spacing:2px;
+  background:var(--blue); padding:3px 10px; color:white;
+}
+.top-event {
+  font-family:'DM Mono',monospace;
+  font-size:10px; letter-spacing:1px;
+  color:var(--gray-light); flex:1; text-align:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.top-total {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px; letter-spacing:2px; color:var(--green);
+  white-space:nowrap;
+}
+.top-btns { display:flex; gap:6px; }
+.top-btn {
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--gray-light); padding:5px 10px;
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px;
+  cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.top-btn:hover { border-color:var(--blue); color:var(--white); }
+.top-btn.active { background:var(--blue); border-color:var(--blue); color:white; }
+
+/* ── MAIN LAYOUT ── */
+#mainLayout {
+  flex:1; display:flex; overflow:hidden;
+}
+
+/* ── PRODUCTS GRID ── */
+#productsPane {
+  flex:1; overflow-y:auto; padding:12px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+  gap:8px; align-content:start;
+}
+
+.product-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:14px 10px;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  cursor:pointer; transition:all 0.15s; position:relative;
+  user-select:none;
+}
+.product-card:hover { border-color:var(--blue); background:var(--surface2); }
+.product-card:active { transform:scale(0.96); }
+.product-card.out-of-stock { opacity:0.35; pointer-events:none; }
+.product-card.dragging { opacity:0.4; border:1px dashed var(--blue); transform:scale(0.97); }
+.product-card.drag-over { border-color:var(--cyan); background:rgba(0,221,255,0.07); transform:scale(1.02); }
+.drag-handle {
+  position:absolute; top:5px; left:5px;
+  font-size:12px; color:var(--gray); opacity:0;
+  transition:opacity 0.2s; cursor:grab; padding:2px 4px;
+  line-height:1;
+}
+.product-card:hover .drag-handle { opacity:1; }
+.drag-handle:active { cursor:grabbing; }
+
+.product-emoji { font-size:40px; line-height:1; }
+.product-name {
+  font-family:'Syne',sans-serif; font-weight:700;
+  font-size:13px; text-align:center; line-height:1.2;
+}
+.product-price {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:20px; letter-spacing:1px; color:var(--cyan);
+}
+.product-stock {
+  font-family:'DM Mono',monospace;
+  font-size:9px; letter-spacing:1px; color:var(--gray-light);
+}
+.product-stock.low { color:var(--orange); }
+.product-stock.critical { color:var(--red); }
+.out-badge {
+  position:absolute; top:6px; right:6px;
+  background:var(--red); color:white;
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1px;
+  padding:2px 6px;
+}
+
+/* ── CART SIDEBAR ── */
+#cartPane {
+  width:var(--sidebar-w); flex-shrink:0;
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+.cart-header {
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.cart-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px; letter-spacing:3px;
+}
+.cart-clear {
+  font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:1px; color:var(--gray);
+  cursor:pointer; transition:color 0.2s;
+}
+.cart-clear:hover { color:var(--red); }
+
+.cart-items {
+  flex:1; overflow-y:auto; padding:10px;
+}
+.cart-empty {
+  text-align:center; padding:40px 20px;
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--gray); letter-spacing:2px;
+}
+
+.cart-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 8px;
+  border-bottom:1px solid var(--border);
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:translateX(0);} }
+
+.ci-emoji { font-size:24px; flex-shrink:0; }
+.ci-info { flex:1; min-width:0; }
+.ci-name {
+  font-family:'Syne',sans-serif; font-weight:700;
+  font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ci-price {
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--gray-light); letter-spacing:1px;
+}
+.ci-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.ci-btn {
+  width:26px; height:26px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--white); font-size:15px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.ci-btn:hover { border-color:var(--blue); }
+.ci-qty {
+  font-family:'Bebas Neue',sans-serif; font-size:18px;
+  min-width:22px; text-align:center;
+}
+
+/* ── CART FOOTER ── */
+.cart-footer {
+  padding:14px 16px;
+  border-top:1px solid var(--border);
+}
+
+.payment-method {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:6px; margin-bottom:12px;
+}
+.pm-btn {
+  padding:8px 4px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--gray-light);
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px;
+  cursor:pointer; text-align:center; transition:all 0.15s;
+}
+.pm-btn:hover { border-color:var(--blue); color:var(--white); }
+.pm-btn.selected { background:var(--blue); border-color:var(--blue); color:white; }
+
+.org-selector {
+  margin-bottom:12px;
+  display:none;
+}
+.org-selector.visible { display:block; }
+.org-label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:1px; color:var(--orange); margin-bottom:6px;
+}
+.org-btns { display:flex; flex-wrap:wrap; gap:5px; }
+.org-btn {
+  padding:5px 10px;
+  background:rgba(255,136,0,0.08); border:1px solid rgba(255,136,0,0.25);
+  color:var(--orange);
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px;
+  cursor:pointer; transition:all 0.15s;
+}
+.org-btn:hover,.org-btn.selected { background:var(--orange); border-color:var(--orange); color:black; }
+
+.cart-total-row {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:12px;
+}
+.cart-total-label {
+  font-family:'DM Mono',monospace; font-size:10px;
+  letter-spacing:2px; color:var(--gray-light);
+}
+.cart-total-amount {
+  font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:2px;
+}
+.cart-total-amount.free { color:var(--orange); }
+
+.checkout-btn {
+  width:100%; background:var(--green); color:#001a00;
+  border:none; padding:14px;
+  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px;
+  cursor:pointer; transition:all 0.2s;
+}
+.checkout-btn:hover { background:#00AA55; }
+.checkout-btn:active { transform:scale(0.98); }
+.checkout-btn:disabled { background:var(--surface2); color:var(--gray); cursor:not-allowed; }
+
+/* ── PANELS (Stock, Retiros, Resumen, Admin) ── */
+#panelOverlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.8); z-index:500;
+  backdrop-filter:blur(6px);
+  align-items:flex-start; justify-content:center;
+  padding:20px;
+  overflow-y:auto;
+}
+#panelOverlay.open { display:flex; }
+
+.panel {
+  background:var(--surface);
+  border:1px solid rgba(0,85,255,0.25);
+  width:min(720px,100%);
+  max-height:90vh; overflow-y:auto;
+  margin:auto;
+}
+.panel-header {
+  background:var(--blue); padding:16px 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:1;
+}
+.panel-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px; letter-spacing:4px;
+}
+.panel-close {
+  background:none; border:none; color:white;
+  font-size:22px; cursor:pointer; opacity:0.8;
+  transition:opacity 0.2s;
+}
+.panel-close:hover { opacity:1; }
+.panel-body { padding:24px; }
+
+.panel-section {
+  margin-bottom:28px;
+}
+.panel-section-title {
+  font-family:'DM Mono',monospace; font-size:10px;
+  letter-spacing:3px; color:var(--blue-light);
+  text-transform:uppercase; margin-bottom:14px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(0,85,255,0.15);
+}
+
+/* Stock table */
+.stock-table { width:100%; border-collapse:collapse; }
+.stock-table th {
+  font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:2px; color:var(--gray-light);
+  text-transform:uppercase; padding:8px 10px;
+  text-align:left; border-bottom:1px solid var(--border);
+}
+.stock-table td {
+  padding:10px 10px; border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+.stock-table tr:last-child td { border-bottom:none; }
+.stock-input {
+  width:80px; background:var(--bg);
+  border:1px solid rgba(0,85,255,0.2);
+  color:var(--white); padding:6px 8px;
+  font-family:'Syne',sans-serif; font-size:14px;
+  text-align:center; outline:none;
+  transition:border-color 0.2s;
+}
+.stock-input:focus { border-color:var(--blue); }
+
+/* Product form */
+.pf-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.pf-label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:2px; color:var(--gray-light);
+  text-transform:uppercase; display:block; margin-bottom:5px;
+}
+.pf-input {
+  width:100%; background:var(--bg);
+  border:1px solid rgba(0,85,255,0.2);
+  color:var(--white); padding:9px 12px;
+  font-family:'Syne',sans-serif; font-size:14px;
+  outline:none; transition:border-color 0.2s;
+}
+.pf-input:focus { border-color:var(--blue); }
+
+.panel-btn {
+  background:var(--blue); color:white; border:none;
+  padding:10px 20px;
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px;
+  cursor:pointer; transition:background 0.2s;
+}
+.panel-btn:hover { background:#0044DD; }
+.panel-btn.green { background:var(--green); color:#001a00; }
+.panel-btn.green:hover { background:#00AA55; }
+.panel-btn.red { background:var(--red); }
+.panel-btn.red:hover { background:#CC0033; }
+.panel-btn.secondary {
+  background:transparent; border:1px solid var(--border);
+  color:var(--gray-light);
+}
+.panel-btn.secondary:hover { border-color:var(--blue); color:var(--white); background:transparent; }
+
+/* Retiro */
+.retiro-log {
+  background:var(--bg);
+  border:1px solid var(--border);
+  padding:12px; max-height:200px; overflow-y:auto;
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--gray-light); letter-spacing:1px; line-height:1.8;
+}
+.retiro-entry { border-bottom:1px solid var(--border); padding:6px 0; }
+.retiro-entry:last-child { border-bottom:none; }
+
+/* Summary */
+.summary-card {
+  background:var(--bg); border:1px solid var(--border);
+  padding:16px 20px; margin-bottom:8px;
+}
+.summary-barra {
+  font-family:'Bebas Neue',sans-serif; font-size:20px;
+  letter-spacing:3px; margin-bottom:8px;
+}
+.summary-row {
+  display:flex; justify-content:space-between;
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--gray-light); letter-spacing:1px;
+  padding:3px 0;
+}
+.summary-row.total {
+  color:var(--white); font-size:13px;
+  border-top:1px solid var(--border);
+  padding-top:8px; margin-top:4px;
+}
+.summary-row.grand {
+  font-size:15px; color:var(--green);
+}
+
+/* Admin */
+.admin-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.event-config-input {
+  width:100%; background:var(--bg);
+  border:1px solid rgba(0,85,255,0.2);
+  color:var(--white); padding:9px 12px;
+  font-family:'Syne',sans-serif; font-size:13px;
+  outline:none; margin-bottom:10px;
+  transition:border-color 0.2s;
+}
+.event-config-input:focus { border-color:var(--blue); }
+
+/* Products list in admin */
+.prod-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--border);
+}
+.prod-row:last-child { border-bottom:none; }
+.prod-emoji-big { font-size:28px; }
+.prod-row-info { flex:1; }
+.prod-row-name { font-weight:700; font-size:14px; }
+.prod-row-meta {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--gray-light); letter-spacing:1px;
+}
+
+/* ── EMOJI PICKER ── */
+.emoji-picker-wrap { position:relative; }
+.emoji-picker {
+  display:none;
+  position:absolute;
+  top:calc(100% + 4px);
+  left:0;
+  background:var(--surface);
+  border:1px solid rgba(0,85,255,0.3);
+  padding:10px;
+  z-index:2000;
+  width:260px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+}
+.emoji-picker.open { display:block; }
+.emoji-cat-label {
+  font-family:'DM Mono',monospace;
+  font-size:8px; letter-spacing:2px;
+  color:var(--blue-light);
+  text-transform:uppercase;
+  margin:8px 0 4px;
+  display:block;
+}
+.emoji-cat-label:first-child { margin-top:0; }
+.emoji-grid {
+  display:flex; flex-wrap:wrap; gap:2px;
+}
+.emoji-btn {
+  width:32px; height:32px;
+  font-size:20px;
+  background:transparent;
+  border:1px solid transparent;
+  cursor:pointer;
+  border-radius:4px;
+  transition:all 0.1s;
+  display:flex; align-items:center; justify-content:center;
+  line-height:1;
+}
+.emoji-btn:hover {
+  background:rgba(0,85,255,0.15);
+  border-color:var(--blue);
+  transform:scale(1.15);
+}
+
+/* ── TICKET PRINT ── */
+@media print {
+  body > *:not(#printArea) { display:none !important; }
+  #printArea { display:block !important; }
+  @page { size:80mm auto; margin:0; }
+}
+#printArea {
+  display:none;
+  font-family:monospace; font-size:12px;
+  padding:8mm 6mm; width:72mm;
+  color:black; background:white;
+}
+.ticket-header { text-align:center; margin-bottom:8px; }
+.ticket-logo { font-size:18px; font-weight:bold; letter-spacing:2px; }
+.ticket-event { font-size:13px; font-weight:bold; margin:3px 0; }
+.ticket-meta { font-size:10px; color:#555; }
+.ticket-divider { border:none; border-top:1px dashed #999; margin:8px 0; }
+.ticket-item { display:flex; justify-content:space-between; margin:3px 0; font-size:11px; }
+.ticket-total { display:flex; justify-content:space-between; font-weight:bold; font-size:13px; margin-top:5px; }
+.ticket-footer { text-align:center; font-size:10px; color:#555; margin-top:6px; }
+.ticket-canjeado { text-align:center; font-size:16px; font-weight:bold; margin:6px 0; letter-spacing:2px; }
+.ticket-single { break-after:page; page-break-after:always; }
+.ticket-single:last-child { break-after:auto; page-break-after:auto; }
+.ticket-progress { text-align:center; font-size:9px; color:#555; letter-spacing:1px; margin-top:4px; }
+
+/* ── PIN MODAL ── */
+.pin-overlay {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:8000;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(10px);
+}
+.pin-box {
+  background:var(--surface);
+  border:1px solid rgba(0,85,255,0.3);
+  width:min(340px,92vw);
+  overflow:hidden;
+}
+.pin-top {
+  background:var(--blue);
+  padding:16px 24px;
+  display:flex; align-items:center; gap:10px;
+}
+.pin-top-icon { font-size:20px; }
+.pin-top-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:20px; letter-spacing:4px;
+}
+.pin-body { padding:24px; }
+.pin-label {
+  font-family:'DM Mono',monospace;
+  font-size:9px; letter-spacing:2px;
+  color:var(--gray-light); text-transform:uppercase;
+  margin-bottom:10px; display:block;
+}
+.pin-input {
+  width:100%; background:var(--bg);
+  border:1px solid rgba(0,85,255,0.2);
+  color:var(--white); padding:12px 16px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px; letter-spacing:8px;
+  text-align:center; outline:none;
+  transition:border-color 0.2s;
+  letter-spacing:6px;
+}
+.pin-input:focus { border-color:var(--blue); }
+.pin-numpad {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:6px; margin-top:14px;
+}
+.pin-key {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--white);
+  padding:14px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px; letter-spacing:2px;
+  cursor:pointer; text-align:center;
+  transition:all 0.15s; user-select:none;
+}
+.pin-key:hover { border-color:var(--blue); background:rgba(0,85,255,0.1); }
+.pin-key:active { transform:scale(0.93); }
+.pin-key.del { color:var(--red); font-size:18px; }
+.pin-key.enter { background:var(--blue); border-color:var(--blue); grid-column:span 2; }
+.pin-key.enter:hover { background:#0044DD; }
+.pin-error {
+  font-family:'DM Mono',monospace;
+  font-size:10px; color:var(--red);
+  text-align:center; margin-top:10px;
+  letter-spacing:1px; min-height:16px;
+}
+.pin-dots {
+  display:flex; justify-content:center; gap:10px;
+  margin:12px 0 4px;
+}
+.pin-dot {
+  width:12px; height:12px; border-radius:50%;
+  background:var(--border);
+  transition:background 0.15s;
+}
+.pin-dot.filled { background:var(--blue); }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:24px; left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--blue); color:white;
+  padding:10px 22px;
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px;
+  z-index:9999; transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  white-space:nowrap; pointer-events:none;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.green { background:var(--green); color:#001a00; }
+.toast.red { background:var(--red); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  :root { --sidebar-w:100%; }
+  #mainLayout { flex-direction:column; }
+  #productsPane {
+    grid-template-columns:repeat(3,1fr);
+    max-height:50vh;
+  }
+  #cartPane { width:100%; border-left:none; border-top:1px solid var(--border); }
+  .product-emoji { font-size:28px; }
+  .top-event { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-top">
+      <div class="setup-logo">UNDERHERTZ BARRA</div>
+      <div class="setup-subtitle">Sistema de punto de venta</div>
+    </div>
+    <div class="setup-body">
+      <label class="setup-label">Nombre de esta barra</label>
+      <input class="setup-input" id="barraNameInput" placeholder="Ej: Barra Principal, Barra VIP...">
+
+      <label class="setup-label">Tu nombre (operador)</label>
+      <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
+
+      <div class="firebase-note">
+        ⚠ CONFIGURACIÓN FIREBASE REQUERIDA<br><br>
+        Para sincronizar las 4 barras necesitás una cuenta de Firebase gratuita:<br>
+        1. Entrá a <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a><br>
+        2. Creá un proyecto → Realtime Database → Modo test<br>
+        3. Copiá tu configuración en el código (línea ~25)<br><br>
+        Mientras tanto el sistema funciona en modo LOCAL (sin sync entre barras).
+      </div>
+
+      <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOP BAR ══ -->
+<div id="topBar" style="display:none;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="top-logo">UH<span>.</span></div>
+    <div class="top-barra" id="topBarraName">BARRA 1</div>
+  </div>
+  <div class="top-event" id="topEventName">—</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div>
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gray-light);letter-spacing:1px;">ESTA BARRA</div>
+      <div class="top-total" id="topTotalLocal">$0</div>
+    </div>
+    <div class="top-btns">
+      <button class="top-btn" onclick="openPanel('stock')">📦 Stock</button>
+      <button class="top-btn" onclick="openPanel('retiro')">💰 Retiro</button>
+      <button class="top-btn" onclick="openPanel('resumen')">📊 Resumen</button>
+      <button class="top-btn" onclick="openPanel('cierre')" style="background:rgba(0,204,102,0.15);border-color:rgba(0,204,102,0.4);color:var(--green);">🔒 Cierre</button>
+      <button class="top-btn" onclick="openPanel('admin')">⚙</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN LAYOUT ══ -->
+<div id="mainLayout" style="display:none;">
+
+  <!-- Products -->
+  <div id="productsPane"></div>
+
+  <!-- Cart -->
+  <div id="cartPane">
+    <div class="cart-header">
+      <span class="cart-title">PEDIDO</span>
+      <span class="cart-clear" onclick="clearCart()">LIMPIAR ✕</span>
+    </div>
+
+    <div class="cart-items" id="cartItems">
+      <div class="cart-empty">AGREGÁ PRODUCTOS</div>
+    </div>
+
+    <div class="cart-footer">
+      <!-- Payment method -->
+      <div class="payment-method">
+        <div class="pm-btn selected" data-pm="efectivo" onclick="selectPM(this)">💵 Efectivo</div>
+        <div class="pm-btn" data-pm="mercadopago" onclick="selectPM(this)">📱 MP</div>
+        <div class="pm-btn" data-pm="tarjeta" onclick="selectPM(this)">💳 Tarjeta</div>
+      </div>
+
+      <!-- Organizador -->
+      <div class="org-selector" id="orgSelector">
+        <div class="org-label">⚠ CONSUMO ORGANIZADOR — Precio $0</div>
+        <div class="org-btns" id="orgBtns"></div>
+      </div>
+
+      <!-- Total -->
+      <div class="cart-total-row">
+        <span class="cart-total-label">TOTAL</span>
+        <span class="cart-total-amount" id="cartTotal">$0</span>
+      </div>
+
+      <button class="checkout-btn" id="checkoutBtn" onclick="processCheckout()" disabled>
+        COBRAR Y IMPRIMIR
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANEL OVERLAY ══ -->
+<div id="panelOverlay" onclick="closePanelIfBg(event)">
+  <div class="panel" id="panelContent"></div>
+</div>
+
+<!-- ══ PRINT AREA ══ -->
+<div id="printArea"></div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<!-- PIN MODAL -->
+<div class="pin-overlay" id="pinOverlay" style="display:none;">
+  <div class="pin-box">
+    <div class="pin-top">
+      <span class="pin-top-icon" id="pinIcon">🔒</span>
+      <span class="pin-top-title" id="pinTitle">CONTRASEÑA ADMIN</span>
+    </div>
+    <div class="pin-body">
+      <span class="pin-label" id="pinLabel">Ingresá el PIN de administrador</span>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot" id="dot0"></div>
+        <div class="pin-dot" id="dot1"></div>
+        <div class="pin-dot" id="dot2"></div>
+        <div class="pin-dot" id="dot3"></div>
+      </div>
+      <div class="pin-numpad">
+        <div class="pin-key" onclick="pinKey('1')">1</div>
+        <div class="pin-key" onclick="pinKey('2')">2</div>
+        <div class="pin-key" onclick="pinKey('3')">3</div>
+        <div class="pin-key" onclick="pinKey('4')">4</div>
+        <div class="pin-key" onclick="pinKey('5')">5</div>
+        <div class="pin-key" onclick="pinKey('6')">6</div>
+        <div class="pin-key" onclick="pinKey('7')">7</div>
+        <div class="pin-key" onclick="pinKey('8')">8</div>
+        <div class="pin-key" onclick="pinKey('9')">9</div>
+        <div class="pin-key del" onclick="pinDel()">⌫</div>
+        <div class="pin-key" onclick="pinKey('0')">0</div>
+        <div class="pin-key enter" onclick="pinConfirm()">ENTRAR</div>
+      </div>
+      <div class="pin-error" id="pinError"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let SESSION = {
+  barra: '',
+  operador: '',
+  eventName: 'UNDERHERTZ',
+  eventDate: '',
+  eventLocation: 'Aquelarre · General Roca',
+  organizers: ['Organizador 1', 'Organizador 2'],
+  selectedOrg: null,
+  paymentMethod: 'efectivo',
+};
+
+// ─── PIN SYSTEM ───
+let PINS = {
+  operador: '1234',  // PIN para entrar al sistema — CAMBIALO
+  admin: '0000',     // PIN para panel admin — CAMBIALO
+};
+
+let pinBuffer = '';
+let pinCallback = null;
+let pinMode = '';
+
+function requirePin(mode, callback) {
+  pinMode = mode;
+  pinCallback = callback;
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+
+  if (mode === 'admin') {
+    document.getElementById('pinIcon').textContent = '🔐';
+    document.getElementById('pinTitle').textContent = 'ACCESO ADMIN';
+    document.getElementById('pinLabel').textContent = 'Ingresá el PIN de administrador';
+  } else {
+    document.getElementById('pinIcon').textContent = '🔒';
+    document.getElementById('pinTitle').textContent = 'CONTRASEÑA';
+    document.getElementById('pinLabel').textContent = 'Ingresá tu PIN de operador';
+  }
+
+  document.getElementById('pinOverlay').style.display = 'flex';
+}
+
+function pinKey(k) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += k;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(pinConfirm, 200);
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('dot' + i).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function pinConfirm() {
+  const correct = PINS[pinMode] || PINS.admin;
+  if (pinBuffer === correct) {
+    document.getElementById('pinOverlay').style.display = 'none';
+    pinBuffer = '';
+    updatePinDots();
+    if (pinCallback) pinCallback();
+    pinCallback = null;
+  } else {
+    document.getElementById('pinError').textContent = 'PIN INCORRECTO — INTENTÁ DE NUEVO';
+    pinBuffer = '';
+    updatePinDots();
+    // Shake animation
+    const box = document.querySelector('.pin-box');
+    box.style.animation = 'none';
+    box.offsetHeight;
+    box.style.animation = 'shake 0.4s ease';
+  }
+}
+
+// Load saved PINs from localStorage
+const savedPins = JSON.parse(localStorage.getItem('uh_pins') || 'null');
+if (savedPins && savedPins.operador && savedPins.admin) { PINS = { operador: savedPins.operador, admin: savedPins.admin }; }
+
+// Shake keyframe via JS
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}';
+document.head.appendChild(shakeStyle);
+
+// Keyboard support for PIN
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pinOverlay').style.display !== 'none') {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    else if (e.key === 'Backspace') pinDel();
+    else if (e.key === 'Enter') pinConfirm();
+  }
+});
+
+let cart = [];
+let products = JSON.parse(localStorage.getItem('uh_products') || 'null') || [
+  { id:1, name:'Cerveza', emoji:'🍺', price:2500, stock:100, initialStock:100 },
+  { id:2, name:'Fernet', emoji:'🥃', price:3500, stock:80, initialStock:80 },
+  { id:3, name:'Agua', emoji:'💧', price:1000, stock:150, initialStock:150 },
+  { id:4, name:'Gaseosa', emoji:'🥤', price:1500, stock:120, initialStock:120 },
+  { id:5, name:'Vaso UH', emoji:'🖤', price:2000, stock:200, initialStock:200 },
+  { id:6, name:'Shot', emoji:'🔥', price:1800, stock:60, initialStock:60 },
+];
+
+let salesLog = JSON.parse(localStorage.getItem('uh_sales') || '[]');
+let retiroLog = JSON.parse(localStorage.getItem('uh_retiros') || '[]');
+let totalLocal = parseInt(localStorage.getItem('uh_total') || '0');
+
+// Firebase refs
+let dbRef = null;
+
+// ═══════════════════════════════════════════════
+// SESSION START
+// ═══════════════════════════════════════════════
+function startSession() {
+  const barra = document.getElementById('barraNameInput').value.trim() || 'Barra 1';
+  const operador = document.getElementById('operadorInput').value.trim() || 'Operador';
+  if (!barra) { alert('Escribí el nombre de la barra'); return; }
+  if (!operador) { alert('Escribí tu nombre'); return; }
+
+  SESSION.barra = barra;
+  SESSION.operador = operador;
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('topBar').style.display = 'flex';
+  document.getElementById('mainLayout').style.display = 'flex';
+  document.getElementById('topBarraName').textContent = barra.toUpperCase();
+
+    const saved = JSON.parse(localStorage.getItem('uh_eventConfig') || '{}');
+    if (saved.eventName) SESSION.eventName = saved.eventName;
+    if (saved.eventDate) SESSION.eventDate = saved.eventDate;
+    if (saved.eventLocation) SESSION.eventLocation = saved.eventLocation;
+    if (saved.organizers) SESSION.organizers = saved.organizers;
+
+    document.getElementById('topEventName').textContent =
+      SESSION.eventName + (SESSION.eventDate ? ' · ' + SESSION.eventDate : '');
+
+    updateTotalDisplay();
+    renderProducts();
+    renderOrgBtns();
+    initFirebase();
+}
+
+// ═══════════════════════════════════════════════
+// FIREBASE SYNC
+// ═══════════════════════════════════════════════
+function initFirebase() {
+  if (!window._firebaseReady) {
+    document.addEventListener('firebaseReady', initFirebase);
+    return;
+  }
+  try {
+    const db = window._db;
+    const refFn = window._ref;
+    dbRef = refFn(db, 'underhertz/stock');
+
+    // Listen for stock changes from other barras
+    window._onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      products.forEach(p => {
+        if (data[p.id] !== undefined && data[p.id] !== p.stock) {
+          p.stock = data[p.id];
+        }
+      });
+      saveProducts();
+      renderProducts();
+    });
+
+    // Listen for product catalog changes (prices, names, new products)
+    const productsRef = refFn(db, 'underhertz/products');
+    window._onValue(productsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        // First time: push local products to Firebase
+        pushProductsToFirebase();
+        return;
+      }
+      // Merge Firebase products into local, preserving stock
+      const fbProducts = Object.values(data);
+      if (fbProducts.length === 0) { pushProductsToFirebase(); return; }
+
+      // Update local products from Firebase (prices, names, emoji)
+      // but keep local stock as source of truth (stock is synced separately)
+      const newProducts = fbProducts.map(fp => {
+        const local = products.find(p => p.id === fp.id);
+        return {
+          ...fp,
+          stock: local ? local.stock : fp.stock,
+        };
+      });
+      products = newProducts;
+      saveProducts();
+      renderProducts();
+    });
+
+    // Register this barra in Firebase
+    const barraRef = refFn(db, 'underhertz/barras/' + SESSION.barra.replace(/[^a-zA-Z0-9]/g,'_'));
+    window._set(barraRef, { name: SESSION.barra, operador: SESSION.operador, lastSeen: new Date().toISOString() });
+
+    showToast('✓ CONECTADO A FIREBASE', 'green');
+  } catch(e) {
+    console.log('Firebase not configured, running local mode');
+  }
+}
+
+function pushStockToFirebase() {
+  if (!window._firebaseReady || !dbRef) return;
+  try {
+    const stockData = {};
+    products.forEach(p => { stockData[p.id] = p.stock; });
+    window._set(dbRef, stockData);
+  } catch(e) {}
+}
+
+function pushProductsToFirebase() {
+  if (!window._firebaseReady) return;
+  try {
+    const db = window._db;
+    const refFn = window._ref;
+    const productsData = {};
+    products.forEach(p => { productsData[p.id] = p; });
+    window._set(refFn(db, 'underhertz/products'), productsData);
+  } catch(e) {}
+}
+
+function updateProductInFirebase(product) {
+  if (!window._firebaseReady) return;
+  try {
+    const db = window._db;
+    const refFn = window._ref;
+    window._set(refFn(db, 'underhertz/products/' + product.id), product);
+  } catch(e) {}
+}
+
+function updateStockInFirebase(productId, newStock) {
+  if (!window._firebaseReady) return;
+  try {
+    const db = window._db;
+    const refFn = window._ref;
+    const upd = {};
+    upd[productId] = newStock;
+    window._update(refFn(db, 'underhertz/stock'), upd);
+  } catch(e) {}
+}
+
+function pushSaleToFirebase(sale) {
+  if (!window._firebaseReady) return;
+  try {
+    const db = window._db;
+    const refFn = window._ref;
+    const salesRef = refFn(db, 'underhertz/sales');
+    window._push(salesRef, sale);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+// PRODUCTS
+// ═══════════════════════════════════════════════
+function renderProducts() {
+  const pane = document.getElementById('productsPane');
+  pane.innerHTML = products.map(p => {
+    const oos = p.stock <= 0;
+    const low = p.stock > 0 && p.stock <= 10;
+    const critical = p.stock > 0 && p.stock <= 5;
+    return `
+    <div class="product-card ${oos ? 'out-of-stock' : ''}"
+      draggable="true"
+      data-id="${p.id}"
+      onclick="addToCart(${p.id})">
+      <div class="drag-handle" title="Arrastrar para ordenar">⠿</div>
+      ${oos ? '<div class="out-badge">AGOTADO</div>' : ''}
+      <div class="product-emoji">${p.emoji}</div>
+      <div class="product-name">${p.name}</div>
+      ${p.isCombo ? '<div style="font-family:\'DM Mono\',monospace;font-size:8px;color:var(--cyan);letter-spacing:1px;">COMBO</div>' : ''}
+      <div class="product-price">$${p.price.toLocaleString('es-AR')}</div>
+      <div class="product-stock ${critical?'critical':low?'low':''}">
+        ${oos ? 'Sin stock' : `Stock: ${p.stock}`}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Attach drag events
+  initDragAndDrop();
+}
+
+let dragSrcId = null;
+
+function initDragAndDrop() {
+  const cards = document.querySelectorAll('.product-card[draggable]');
+
+  cards.forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragSrcId = parseInt(card.dataset.id);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.product-card').forEach(c => c.classList.remove('drag-over'));
+    });
+
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (parseInt(card.dataset.id) !== dragSrcId) {
+        card.classList.add('drag-over');
+      }
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over');
+    });
+
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      card.classList.remove('drag-over');
+      const targetId = parseInt(card.dataset.id);
+      if (dragSrcId === null || dragSrcId === targetId) return;
+
+      // Reorder products array
+      const srcIdx = products.findIndex(p => p.id === dragSrcId);
+      const tgtIdx = products.findIndex(p => p.id === targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return;
+
+      const [moved] = products.splice(srcIdx, 1);
+      products.splice(tgtIdx, 0, moved);
+
+      saveProducts();
+      pushProductsToFirebase();
+      renderProducts();
+      dragSrcId = null;
+    });
+
+    // Prevent click from firing when dragging ends
+    card.addEventListener('mousedown', e => {
+      // Only start drag from handle
+      if (e.target.classList.contains('drag-handle')) {
+        card.setAttribute('draggable', 'true');
+      }
+    });
+  });
+}
+
+function saveProducts() {
+  localStorage.setItem('uh_products', JSON.stringify(products));
+}
+
+// ═══════════════════════════════════════════════
+// CART
+// ═══════════════════════════════════════════════
+function addToCart(productId) {
+  const p = products.find(x => x.id === productId);
+  if (!p || p.stock <= 0) return;
+
+  const existing = cart.find(x => x.id === productId);
+  if (existing) {
+    if (existing.qty >= p.stock) { showToast('⚠ SIN STOCK SUFICIENTE', 'red'); return; }
+    existing.qty++;
+  } else {
+    cart.push({ id: p.id, name: p.name, emoji: p.emoji, price: p.price, qty: 1 });
+  }
+  renderCart();
+}
+
+function changeCartQty(productId, delta) {
+  const item = cart.find(x => x.id === productId);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(x => x.id !== productId);
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  SESSION.selectedOrg = null;
+  document.querySelectorAll('.org-btn').forEach(b => b.classList.remove('selected'));
+  renderCart();
+}
+
+function renderCart() {
+  const el = document.getElementById('cartItems');
+  if (!cart.length) {
+    el.innerHTML = '<div class="cart-empty">AGREGÁ PRODUCTOS</div>';
+    document.getElementById('checkoutBtn').disabled = true;
+    document.getElementById('cartTotal').textContent = '$0';
+    document.getElementById('cartTotal').classList.remove('free');
+    return;
+  }
+
+  el.innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <div class="ci-emoji">${item.emoji}</div>
+      <div class="ci-info">
+        <div class="ci-name">${item.name}</div>
+        <div class="ci-price">$${(item.price * item.qty).toLocaleString('es-AR')}</div>
+      </div>
+      <div class="ci-controls">
+        <button class="ci-btn" onclick="changeCartQty(${item.id},-1)">−</button>
+        <span class="ci-qty">${item.qty}</span>
+        <button class="ci-btn" onclick="changeCartQty(${item.id},1)">+</button>
+      </div>
+    </div>
+  `).join('');
+
+  const isOrg = !!SESSION.selectedOrg;
+  const total = isOrg ? 0 : cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const totalEl = document.getElementById('cartTotal');
+  totalEl.textContent = isOrg ? 'GRATIS' : '$' + total.toLocaleString('es-AR');
+  totalEl.classList.toggle('free', isOrg);
+  document.getElementById('checkoutBtn').disabled = false;
+}
+
+function getCartTotal() {
+  if (SESSION.selectedOrg) return 0;
+  return cart.reduce((s, i) => s + i.price * i.qty, 0);
+}
+
+// ═══════════════════════════════════════════════
+// PAYMENT
+// ═══════════════════════════════════════════════
+function selectPM(btn) {
+  document.querySelectorAll('.pm-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  SESSION.paymentMethod = btn.dataset.pm;
+
+  // Show org selector only for internal consumption
+  const orgSel = document.getElementById('orgSelector');
+  if (btn.dataset.pm === 'interno') {
+    orgSel.classList.add('visible');
+  } else {
+    orgSel.classList.remove('visible');
+    SESSION.selectedOrg = null;
+    document.querySelectorAll('.org-btn').forEach(b => b.classList.remove('selected'));
+  }
+  renderCart();
+}
+
+function renderOrgBtns() {
+  const container = document.getElementById('orgBtns');
+
+  // Add org consumption as a special "payment" option
+  const pmContainer = document.querySelector('.payment-method');
+  pmContainer.innerHTML = `
+    <div class="pm-btn selected" data-pm="efectivo" onclick="selectPM(this)">💵 Efectivo</div>
+    <div class="pm-btn" data-pm="mercadopago" onclick="selectPM(this)">📱 MP</div>
+    <div class="pm-btn" data-pm="tarjeta" onclick="selectPM(this)">💳 Tarjeta</div>
+    <div class="pm-btn" data-pm="interno" onclick="selectPM(this)" style="grid-column:span 3;background:rgba(255,136,0,0.08);border-color:rgba(255,136,0,0.25);color:var(--orange);">👤 Consumo Organizador</div>
+  `;
+
+  container.innerHTML = SESSION.organizers.map((org, i) => `
+    <div class="org-btn" onclick="selectOrg(this,'${org}')">${org}</div>
+  `).join('');
+}
+
+function selectOrg(btn, name) {
+  document.querySelectorAll('.org-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  SESSION.selectedOrg = name;
+  renderCart();
+}
+
+// ═══════════════════════════════════════════════
+// CHECKOUT
+// ═══════════════════════════════════════════════
+function processCheckout() {
+  if (!cart.length) return;
+
+  const isOrg = !!SESSION.selectedOrg;
+  const total = getCartTotal();
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+
+  // Deduct stock (handles combos)
+  cart.forEach(item => {
+    const p = products.find(x => x.id === item.id);
+    if (!p) return;
+
+    if (p.isCombo && p.comboLines && p.comboLines.length) {
+      // Deduct each component of the combo
+      p.comboLines.forEach(line => {
+        const base = products.find(x => x.id === line.productId);
+        if (base) {
+          base.stock = Math.max(0, base.stock - (line.qty * item.qty));
+          updateStockInFirebase(base.id, base.stock);
+        }
+      });
+    } else {
+      // Normal product
+      p.stock = Math.max(0, p.stock - item.qty);
+      updateStockInFirebase(p.id, p.stock);
+    }
+  });
+  saveProducts();
+  renderProducts();
+
+  // Log sale
+  const sale = {
+    time: timeStr,
+    barra: SESSION.barra,
+    operador: SESSION.operador,
+    items: [...cart],
+    total,
+    paymentMethod: isOrg ? 'organizador' : SESSION.paymentMethod,
+    organizer: SESSION.selectedOrg || null,
+    timestamp: now.toISOString(),
+  };
+  salesLog.push(sale);
+  localStorage.setItem('uh_sales', JSON.stringify(salesLog));
+  pushSaleToFirebase(sale);
+
+  // Update total (only count real sales)
+  if (!isOrg) {
+    totalLocal += total;
+    localStorage.setItem('uh_total', totalLocal);
+    updateTotalDisplay();
+  }
+
+  // Print ticket
+  printTicket(sale);
+
+  // Clear
+  clearCart();
+  showToast(`✓ VENTA $${total.toLocaleString('es-AR')} — IMPRIMIENDO`, 'green');
+}
+
+function updateTotalDisplay() {
+  document.getElementById('topTotalLocal').textContent =
+    '$' + totalLocal.toLocaleString('es-AR');
+}
+
+// ═══════════════════════════════════════════════
+// TICKET PRINT
+// ═══════════════════════════════════════════════
+// Expande los items de una venta en unidades canjeables individuales.
+// - Un producto normal con qty>1 se separa en N unidades (una por ticket).
+// - Un combo/promo (ej. "Promo Cerveza x3") se desglosa según sus comboLines
+//   en las unidades base reales (ej. 3 cervezas), multiplicado por la
+//   cantidad de combos comprados.
+function expandSaleToUnits(sale) {
+  const units = [];
+  sale.items.forEach(item => {
+    const p = products.find(x => x.id === item.id);
+    if (p && p.isCombo && p.comboLines && p.comboLines.length) {
+      for (let c = 0; c < item.qty; c++) {
+        p.comboLines.forEach(line => {
+          const base = products.find(x => x.id === line.productId);
+          for (let u = 0; u < line.qty; u++) {
+            units.push({
+              emoji: base ? base.emoji : item.emoji,
+              name: base ? base.name : item.name,
+              price: null,
+              comboLabel: item.name
+            });
+          }
+        });
+      }
+    } else {
+      for (let u = 0; u < item.qty; u++) {
+        units.push({
+          emoji: item.emoji,
+          name: item.name,
+          price: item.price
+        });
+      }
+    }
+  });
+  return units;
+}
+
+function printTicket(sale) {
+  const isOrg = sale.organizer !== null;
+  const units = expandSaleToUnits(sale);
+  const totalUnits = units.length;
+  const totalStr = isOrg ? 'CONSUMO ORG.' : '$' + sale.total.toLocaleString('es-AR');
+
+  const ticketsHTML = units.map((u, idx) => `
+    <div class="ticket-single">
+      <div class="ticket-header">
+        <div class="ticket-logo">UNDERHERTZ®</div>
+        <div class="ticket-event">${SESSION.eventName}</div>
+        <div class="ticket-meta">${SESSION.eventDate ? SESSION.eventDate + ' · ' : ''}${SESSION.eventLocation}</div>
+      </div>
+      <hr class="ticket-divider">
+      <div class="ticket-item">
+        <span>${u.emoji} ${u.name}</span>
+        <span>${isOrg ? 'GRATIS' : (u.price != null ? '$' + u.price.toLocaleString('es-AR') : '')}</span>
+      </div>
+      ${u.comboLabel ? `<div class="ticket-meta" style="text-align:center;">(${u.comboLabel})</div>` : ''}
+      ${totalUnits > 1 ? `<div class="ticket-progress">ÍTEM ${idx + 1} DE ${totalUnits} · VENTA ${totalStr}</div>` : ''}
+      ${isOrg ? `<div class="ticket-footer">Consumo: ${sale.organizer}</div>` : ''}
+      <hr class="ticket-divider">
+      <div class="ticket-canjeado">CANJEAR EN BARRA</div>
+      <div class="ticket-footer">
+        ${sale.barra} · ${sale.time}<br>
+        Pago: ${sale.paymentMethod.toUpperCase()}<br>
+        ${SESSION.operador}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('printArea').innerHTML = ticketsHTML;
+
+  setTimeout(() => window.print(), 100);
+}
+
+// ═══════════════════════════════════════════════
+// PANELS
+// ═══════════════════════════════════════════════
+let currentPanel = null;
+
+function openPanel(name) {
+  // Admin y Resumen requieren PIN — Stock y Retiro no
+  if (name === 'admin' || name === 'resumen') {
+    requirePin('admin', () => {
+      currentPanel = name;
+      document.getElementById('panelOverlay').classList.add('open');
+      if (name === 'admin') renderAdminPanel(document.getElementById('panelContent'));
+      else if (name === 'resumen') renderResumenPanel(document.getElementById('panelContent'));
+    });
+    return;
+  }
+  currentPanel = name;
+  const overlay = document.getElementById('panelOverlay');
+  const content = document.getElementById('panelContent');
+  overlay.classList.add('open');
+
+  if (name === 'stock') renderStockPanel(content);
+  else if (name === 'cierre') renderCierrePanel(content);
+  else if (name === 'retiro') renderRetiroPanel(content);
+}
+
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+}
+
+function closePanelIfBg(e) {
+  if (e.target === document.getElementById('panelOverlay')) closePanel();
+}
+
+// ── STOCK PANEL ──
+function renderStockPanel(el) {
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">📦 STOCK</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Stock actual · Editable</div>
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Stock inicial</th>
+              <th>Actual</th>
+              <th>Vendidos</th>
+              <th>Ajustar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products.map(p => `
+              <tr>
+                <td>${p.emoji} ${p.name}</td>
+                <td>${p.initialStock}</td>
+                <td><strong>${p.stock}</strong></td>
+                <td>${p.initialStock - p.stock}</td>
+                <td>
+                  <input class="stock-input" type="number" value="${p.stock}"
+                    onchange="updateStock(${p.id}, this.value)">
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="panel-btn green" onclick="saveStockFromPanel()">GUARDAR STOCK</button>
+        <button class="panel-btn secondary" onclick="closePanel()">CERRAR</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateStock(productId, val) {
+  const p = products.find(x => x.id === productId);
+  if (p) p.stock = Math.max(0, parseInt(val) || 0);
+}
+
+function saveStockFromPanel() {
+  saveProducts();
+  pushStockToFirebase();
+  renderProducts();
+  showToast('✓ STOCK GUARDADO', 'green');
+  closePanel();
+}
+
+// ── RETIRO PANEL ──
+function renderRetiroPanel(el) {
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">💰 RETIRO DE CAJA</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Registrar retiro</div>
+        <div style="margin-bottom:12px;">
+          <label class="pf-label">Nombre de quien retira</label>
+          <input class="pf-input" id="retiroNombre" placeholder="Tu nombre">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="pf-label">Monto retirado ($)</label>
+          <input class="pf-input" id="retiroMonto" type="number" placeholder="0">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="pf-label">Nota (opcional)</label>
+          <input class="pf-input" id="retiroNota" placeholder="Ej: Pago DJ, Gastos varios...">
+        </div>
+        <button class="panel-btn green" onclick="registrarRetiro()">✓ REGISTRAR RETIRO</button>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Historial de retiros · ${SESSION.barra}</div>
+        <div class="retiro-log" id="retiroLog">
+          ${retiroLog.filter(r => r.barra === SESSION.barra).map(r =>
+            `<div class="retiro-entry">
+              ${r.time} · <strong>${r.nombre}</strong> · $${r.monto.toLocaleString('es-AR')}
+              ${r.nota ? ' · ' + r.nota : ''}
+            </div>`
+          ).join('') || '<span style="color:var(--gray)">Sin retiros registrados</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function registrarRetiro() {
+  const nombre = document.getElementById('retiroNombre').value.trim();
+  const monto = parseFloat(document.getElementById('retiroMonto').value) || 0;
+  const nota = document.getElementById('retiroNota').value.trim();
+
+  if (!nombre || !monto) { showToast('⚠ COMPLETÁ NOMBRE Y MONTO', 'red'); return; }
+
+  const now = new Date();
+  const entry = {
+    barra: SESSION.barra,
+    nombre,
+    monto,
+    nota,
+    time: now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+    timestamp: now.toISOString(),
+  };
+  retiroLog.push(entry);
+  localStorage.setItem('uh_retiros', JSON.stringify(retiroLog));
+
+  // Push to Firebase
+  if (window._firebaseReady) {
+    try {
+      const db = window._db;
+      const refFn = window._ref;
+      window._push(refFn(db, 'underhertz/retiros'), entry);
+    } catch(e) {}
+  }
+
+  showToast(`✓ RETIRO $${monto.toLocaleString('es-AR')} REGISTRADO`, 'green');
+  renderRetiroPanel(document.getElementById('panelContent'));
+}
+
+// ── CIERRE DE CAJA PANEL ──
+// Store cierre data globally so printCierre can access it
+let _cierreData = {};
+
+function printCierre() {
+  const d = _cierreData;
+  document.getElementById('printArea').innerHTML =
+    '<div class="ticket-header">' +
+    '<div class="ticket-logo">UNDERHERTZ®</div>' +
+    '<div class="ticket-event">CIERRE DE CAJA</div>' +
+    '<div class="ticket-meta">' + d.barra + ' · ' + d.dateStr + ' · ' + d.timeStr + '</div>' +
+    '</div>' +
+    '<hr class="ticket-divider">' +
+    '<div class="ticket-item"><span>TOTAL RECAUDADO</span><span>$' + d.totalGeneral.toLocaleString('es-AR') + '</span></div>' +
+    '<hr class="ticket-divider">' +
+    '<div class="ticket-item"><span>Mercado Pago + Tarjeta</span><span>$' + d.mp.toLocaleString('es-AR') + '</span></div>' +
+    '<div class="ticket-item"><span>Efectivo</span><span>$' + d.efectivo.toLocaleString('es-AR') + '</span></div>' +
+    '<hr class="ticket-divider">' +
+    '<div class="ticket-item"><span>Consumos organizadores</span><span>' + d.orgCount + '</span></div>' +
+    '<hr class="ticket-divider">' +
+    '<div class="ticket-footer">' + d.eventName + (d.eventDate ? ' · ' + d.eventDate : '') + '</div>';
+  setTimeout(() => window.print(), 100);
+}
+
+function renderCierrePanel(el) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const timeStr = now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+
+  const totals = { efectivo: 0, mercadopago: 0 };
+  let orgCount = 0;
+  let totalGeneral = 0;
+
+  salesLog.forEach(s => {
+    if (s.organizer) { orgCount++; return; }
+    const method = s.paymentMethod || 'efectivo';
+    if (method === 'tarjeta' || method === 'mercadopago') {
+      totals.mercadopago += s.total || 0;
+    } else {
+      totals.efectivo += s.total || 0;
+    }
+    totalGeneral += s.total || 0;
+  });
+
+  // Store for print function
+  _cierreData = {
+    barra: SESSION.barra,
+    dateStr, timeStr,
+    totalGeneral,
+    mp: totals.mercadopago,
+    efectivo: totals.efectivo,
+    orgCount,
+    eventName: SESSION.eventName,
+    eventDate: SESSION.eventDate
+  };
+
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">🔒 CIERRE DE CAJA</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);">${SESSION.barra} · ${dateStr} · ${timeStr}</div>
+      </div>
+
+      <div style="background:var(--black);border:1px solid rgba(0,204,102,0.3);padding:0;margin-bottom:16px;overflow:hidden;">
+        <div style="background:rgba(0,204,102,0.1);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;">TOTAL RECAUDADO</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;color:var(--green);">$${totalGeneral.toLocaleString('es-AR')}</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:var(--black);border:1px solid rgba(0,85,255,0.2);padding:20px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--blue-light);margin-bottom:8px;">MERCADO PAGO + TARJETA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--white);">$${totals.mercadopago.toLocaleString('es-AR')}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);margin-top:4px;">En tu cuenta MP</div>
+        </div>
+        <div style="background:var(--black);border:1px solid rgba(255,214,0,0.2);padding:20px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--yellow);margin-bottom:8px;">EFECTIVO</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--white);">$${totals.efectivo.toLocaleString('es-AR')}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);margin-top:4px;">En caja física</div>
+        </div>
+      </div>
+
+      <div style="background:var(--black);border:1px solid var(--border);padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);">Consumos organizadores</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--orange);">${orgCount}</span>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="panel-btn" onclick="printCierre()">🖨 IMPRIMIR CIERRE</button>
+        <button class="panel-btn secondary" onclick="closePanel()">CERRAR</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── RESUMEN PANEL ──
+function renderResumenPanel(el) {
+  // Calculate totals per barra from salesLog
+  const barrasTotals = {};
+  const barrasSales = {};
+  salesLog.forEach(s => {
+    if (!s.organizer) {
+      barrasTotals[s.barra] = (barrasTotals[s.barra] || 0) + s.total;
+    }
+    if (!barrasSales[s.barra]) barrasSales[s.barra] = [];
+    barrasSales[s.barra].push(s);
+  });
+
+  // Product summary
+  const productSold = {};
+  salesLog.forEach(s => {
+    s.items.forEach(i => {
+      productSold[i.name] = (productSold[i.name] || 0) + i.qty;
+    });
+  });
+
+  const grandTotal = Object.values(barrasTotals).reduce((a,b) => a+b, 0);
+
+  const barrasHTML = Object.entries(barrasTotals).map(([b, t]) => `
+    <div class="summary-card">
+      <div class="summary-barra">${b}</div>
+      <div class="summary-row"><span>Ventas</span><span>${(barrasSales[b]||[]).filter(s=>!s.organizer).length}</span></div>
+      <div class="summary-row"><span>Consumos org.</span><span>${(barrasSales[b]||[]).filter(s=>s.organizer).length}</span></div>
+      <div class="summary-row total"><span>TOTAL</span><span>$${t.toLocaleString('es-AR')}</span></div>
+    </div>
+  `).join('') || '<p style="color:var(--gray);font-family:DM Mono,monospace;font-size:11px;">Sin ventas registradas aún.</p>';
+
+  const prodHTML = Object.entries(productSold)
+    .sort((a,b) => b[1]-a[1])
+    .map(([name, qty]) => `
+      <div class="summary-row"><span>${name}</span><span>${qty} unidades</span></div>
+    `).join('');
+
+  const retirosTotal = retiroLog.reduce((s,r) => s + r.monto, 0);
+
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">📊 RESUMEN DE NOCHE</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Total por barra</div>
+        ${barrasHTML}
+        <div class="summary-card" style="border-color:var(--green);">
+          <div class="summary-row grand">
+            <span>TOTAL GENERAL</span>
+            <span>$${grandTotal.toLocaleString('es-AR')}</span>
+          </div>
+          <div class="summary-row" style="color:var(--red);">
+            <span>Total retiros</span>
+            <span>$${retirosTotal.toLocaleString('es-AR')}</span>
+          </div>
+          <div class="summary-row grand">
+            <span>EN CAJA</span>
+            <span>$${(grandTotal - retirosTotal).toLocaleString('es-AR')}</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Productos más vendidos</div>
+        ${prodHTML || '<p style="color:var(--gray);font-family:DM Mono,monospace;font-size:11px;">Sin datos.</p>'}
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Stock final</div>
+        <table class="stock-table">
+          <thead>
+            <tr><th>Producto</th><th>Inicial</th><th>Vendidos</th><th>Final</th></tr>
+          </thead>
+          <tbody>
+            ${products.map(p => `
+              <tr>
+                <td>${p.emoji} ${p.name}</td>
+                <td>${p.initialStock}</td>
+                <td>${p.initialStock - p.stock}</td>
+                <td><strong>${p.stock}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="panel-btn" onclick="window.print()">🖨 IMPRIMIR RESUMEN</button>
+        <button class="panel-btn red" onclick="resetNight()">🔄 RESETEAR NOCHE</button>
+        <button class="panel-btn secondary" onclick="closePanel()">CERRAR</button>
+      </div>
+    </div>
+  `;
+}
+
+function resetNight() {
+  if (!confirm('¿Resetear todos los datos de esta noche? Esto borrará ventas, retiros y totales en todas las barras.')) return;
+  salesLog = []; retiroLog = []; totalLocal = 0;
+  localStorage.setItem('uh_sales', '[]');
+  localStorage.setItem('uh_retiros', '[]');
+  localStorage.setItem('uh_total', '0');
+  // Reset stock to initial
+  products.forEach(p => { p.stock = p.initialStock; });
+  saveProducts();
+  pushStockToFirebase();
+  updateTotalDisplay();
+  renderProducts();
+
+  // Clear Firebase completely
+  if (window._firebaseReady) {
+    try {
+      const db = window._db;
+      const refFn = window._ref;
+      // Clear sales
+      window._set(refFn(db, 'underhertz/sales'), null);
+      // Clear retiros
+      window._set(refFn(db, 'underhertz/retiros'), null);
+      // Clear barras list
+      window._set(refFn(db, 'underhertz/barras'), null);
+      showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS', 'green');
+    } catch(e) {
+      showToast('✓ NOCHE RESETEADA LOCAL', 'green');
+    }
+  } else {
+    showToast('✓ NOCHE RESETEADA', 'green');
+  }
+  closePanel();
+}
+
+// ── ADMIN PANEL ──
+function renderAdminPanel(el) {
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">⚙ ADMINISTRACIÓN</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+
+      <div class="panel-section">
+        <div class="panel-section-title">Configuración del evento</div>
+        <div class="pf-grid">
+          <div>
+            <label class="pf-label">Nombre del evento</label>
+            <input class="event-config-input" id="cfgName" value="${SESSION.eventName}" placeholder="EMI GALVAN">
+          </div>
+          <div>
+            <label class="pf-label">Fecha</label>
+            <input class="event-config-input" id="cfgDate" value="${SESSION.eventDate}" placeholder="25/04/2026">
+          </div>
+          <div>
+            <label class="pf-label">Lugar</label>
+            <input class="event-config-input" id="cfgLocation" value="${SESSION.eventLocation}">
+          </div>
+          <div>
+            <label class="pf-label">Organizadores (separados por coma)</label>
+            <input class="event-config-input" id="cfgOrgs" value="${SESSION.organizers.join(', ')}">
+          </div>
+        </div>
+        <button class="panel-btn green" onclick="saveEventConfig()">GUARDAR CONFIGURACIÓN</button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Productos</div>
+        <div id="adminProductList">
+          ${products.map(p => `
+            <div class="prod-row" style="flex-direction:column;align-items:stretch;gap:10px;" id="prodrow-${p.id}">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="prod-emoji-big">${p.emoji}</div>
+                <div style="flex:1;">
+                  <div class="prod-row-name">${p.name}</div>
+                  <div class="prod-row-meta">
+                    $${p.price.toLocaleString('es-AR')} · ${p.isCombo ? 'COMBO · Descuenta: ' + (p.comboLines||[]).map(l => { const base = products.find(x=>x.id===l.productId); return (base?base.name:'?')+' x'+l.qty; }).join(' + ') : 'Stock: '+p.stock+'/'+p.initialStock}
+                  </div>
+                </div>
+                <button class="panel-btn secondary" onclick="toggleEditProduct(${p.id})" style="padding:6px 14px;font-size:9px;">✏ EDITAR</button>
+                <button class="panel-btn red" onclick="deleteProduct(${p.id})" style="padding:6px 12px;">✕</button>
+              </div>
+              <div id="editform-${p.id}" style="display:none;background:var(--black);padding:12px;border:1px solid rgba(0,85,255,0.15);">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                  <div>
+                    <label class="pf-label">Nombre</label>
+                    <input class="pf-input" id="ep-name-${p.id}" value="${p.name}" placeholder="Nombre">
+                  </div>
+                  <div>
+                    <label class="pf-label">Emoji</label>
+                    <div class="emoji-picker-wrap">
+                    <input class="pf-input" id="ep-emoji-${p.id}" value="${p.emoji}" placeholder="🍺"
+                      style="font-size:20px;cursor:pointer;" readonly
+                      onclick="toggleEmojiPicker('ep-emoji-picker-${p.id}','ep-emoji-${p.id}')">
+                    <div class="emoji-picker" id="ep-emoji-picker-${p.id}">
+                      <span class="emoji-cat-label">🍺 Bebidas</span>
+                      <div class="emoji-grid">
+                        ${['🍺','🍻','🥃','🍷','🍸','🍹','🥂','🫗','🧉','🍾','🥛','💧','🥤','🧃','☕','🧋','🍵','🫖'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('ep-emoji-${p.id}','ep-emoji-picker-${p.id}','${e}')">${e}</button>`).join('')}
+                      </div>
+                      <span class="emoji-cat-label">🍕 Comidas</span>
+                      <div class="emoji-grid">
+                        ${['🍕','🌭','🍔','🌮','🍟','🥪','🥨','🍿','🥐','🧆','🥙','🌯'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('ep-emoji-${p.id}','ep-emoji-picker-${p.id}','${e}')">${e}</button>`).join('')}
+                      </div>
+                      <span class="emoji-cat-label">🎉 Evento</span>
+                      <div class="emoji-grid">
+                        ${['🎟','🎉','🎊','🔥','⭐','💎','🖤','🎵','🎶','🎧','🎤','💫','✨','🌟','🏷','📦','🎁','🪄'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('ep-emoji-${p.id}','ep-emoji-picker-${p.id}','${e}')">${e}</button>`).join('')}
+                      </div>
+                      <span class="emoji-cat-label">🪙 Promos</span>
+                      <div class="emoji-grid">
+                        ${['🪙','💰','💵','🎯','🔖','🏷','2️⃣','3️⃣','4️⃣','5️⃣','🅰️','🅱️','🆙','🆒','🆓','🔴','🟡','🟢','🔵'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('ep-emoji-${p.id}','ep-emoji-picker-${p.id}','${e}')">${e}</button>`).join('')}
+                      </div>
+                    </div>
+                  </div>
+                  </div>
+                  <div>
+                    <label class="pf-label">Precio ($)</label>
+                    <input class="pf-input" id="ep-price-${p.id}" type="number" value="${p.price}" placeholder="0">
+                  </div>
+                  <div>
+                    <label class="pf-label">Stock inicial</label>
+                    <input class="pf-input" id="ep-stock-${p.id}" type="number" value="${p.initialStock}" placeholder="0">
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button class="panel-btn green" onclick="saveEditProduct(${p.id})">✓ GUARDAR CAMBIOS</button>
+                  <button class="panel-btn secondary" onclick="toggleEditProduct(${p.id})">CANCELAR</button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Cambiar PINs</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label class="pf-label">PIN Operador (entrada al sistema)</label>
+            <input class="pf-input" id="newPinOp" type="password" maxlength="4" placeholder="4 dígitos">
+          </div>
+          <div>
+            <label class="pf-label">PIN Admin (panel admin)</label>
+            <input class="pf-input" id="newPinAdmin" type="password" maxlength="4" placeholder="4 dígitos">
+          </div>
+        </div>
+        <button class="panel-btn" onclick="changePins()">GUARDAR NUEVOS PINS</button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Agregar producto</div>
+        <div class="pf-grid">
+          <div>
+            <label class="pf-label">Nombre</label>
+            <input class="pf-input" id="npName" placeholder="Cerveza">
+          </div>
+          <div>
+            <label class="pf-label">Emoji</label>
+            <div class="emoji-picker-wrap">
+              <input class="pf-input" id="npEmoji" placeholder="🍺" readonly
+                onclick="toggleEmojiPicker('npEmojiPicker','npEmoji')"
+                style="cursor:pointer;" value="🍺">
+              <div class="emoji-picker" id="npEmojiPicker">
+                <span class="emoji-cat-label">🍺 Bebidas</span>
+                <div class="emoji-grid">
+                  ${['🍺','🍻','🥃','🍷','🍸','🍹','🥂','🫗','🧉','🍾','🥛','💧','🥤','🧃','☕','🧋','🍵','🫖'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('npEmoji','npEmojiPicker','${e}')">${e}</button>`).join('')}
+                </div>
+                <span class="emoji-cat-label">🍕 Comidas</span>
+                <div class="emoji-grid">
+                  ${['🍕','🌭','🍔','🌮','🍟','🥪','🥨','🍿','🥐','🧆','🥙','🌯'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('npEmoji','npEmojiPicker','${e}')">${e}</button>`).join('')}
+                </div>
+                <span class="emoji-cat-label">🎉 Evento</span>
+                <div class="emoji-grid">
+                  ${['🎟','🎉','🎊','🔥','⭐','💎','🖤','🎵','🎶','🎧','🎤','💫','✨','🌟','🏷','📦','🎁','🪄'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('npEmoji','npEmojiPicker','${e}')">${e}</button>`).join('')}
+                </div>
+                <span class="emoji-cat-label">🪙 Promos</span>
+                <div class="emoji-grid">
+                  ${['🪙','💰','💵','🎯','🔖','🏷','2️⃣','3️⃣','4️⃣','5️⃣','🅰️','🅱️','🆙','🆒','🆓','🔴','🟡','🟢','🔵'].map(e=>`<button class="emoji-btn" onclick="pickEmoji('npEmoji','npEmojiPicker','${e}')">${e}</button>`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="pf-label">Precio ($)</label>
+            <input class="pf-input" id="npPrice" type="number" placeholder="2500">
+          </div>
+          <div>
+            <label class="pf-label">Stock inicial (unidades)</label>
+            <input class="pf-input" id="npStock" type="number" placeholder="100">
+          </div>
+        </div>
+
+        <div style="margin:12px 0;padding:12px;background:rgba(0,221,255,0.06);border:1px solid rgba(0,221,255,0.15);">
+          <button id="comboSwitch" onclick="toggleComboForm()" style="width:100%;padding:12px;background:transparent;border:1px solid rgba(0,221,255,0.3);color:var(--cyan);font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;cursor:pointer;text-align:left;transition:all 0.2s;">
+            ☐ &nbsp; ES UN COMBO / PROMO — TAP PARA ACTIVAR
+          </button>
+          <div id="comboFormNew" style="display:none;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);letter-spacing:1px;margin-bottom:8px;">
+              Definí qué productos descuenta este combo del stock:
+            </div>
+            <div id="comboLinesNew"></div>
+            <button class="panel-btn secondary" onclick="addComboLine('New')" style="padding:5px 12px;font-size:9px;margin-top:6px;">+ AGREGAR PRODUCTO AL COMBO</button>
+          </div>
+        </div>
+
+        <button class="panel-btn" onclick="addProduct()" style="margin-top:8px;">+ AGREGAR PRODUCTO</button>
+      </div>
+
+    </div>
+  `;
+}
+
+function saveEventConfig() {
+  SESSION.eventName = document.getElementById('cfgName').value.trim() || 'UNDERHERTZ';
+  SESSION.eventDate = document.getElementById('cfgDate').value.trim();
+  SESSION.eventLocation = document.getElementById('cfgLocation').value.trim();
+  SESSION.organizers = document.getElementById('cfgOrgs').value.split(',').map(s => s.trim()).filter(Boolean);
+
+  localStorage.setItem('uh_eventConfig', JSON.stringify({
+    eventName: SESSION.eventName,
+    eventDate: SESSION.eventDate,
+    eventLocation: SESSION.eventLocation,
+    organizers: SESSION.organizers,
+  }));
+
+  document.getElementById('topEventName').textContent =
+    SESSION.eventName + (SESSION.eventDate ? ' · ' + SESSION.eventDate : '');
+
+  renderOrgBtns();
+  showToast('✓ CONFIGURACIÓN GUARDADA', 'green');
+  closePanel();
+}
+
+// ── COMBO HELPERS ──
+let _isComboActive = false;
+
+function toggleComboForm() {
+  _isComboActive = !_isComboActive;
+  const btn = document.getElementById('comboSwitch');
+  const form = document.getElementById('comboFormNew');
+  if (!btn || !form) return;
+  if (_isComboActive) {
+    btn.innerHTML = '☑ &nbsp; ES UN COMBO / PROMO — ACTIVADO ✓';
+    btn.style.background = 'rgba(0,221,255,0.1)';
+    btn.style.borderColor = 'var(--cyan)';
+    form.style.display = 'block';
+    if (document.getElementById('comboLinesNew').children.length === 0) addComboLine('New');
+  } else {
+    btn.innerHTML = '☐ &nbsp; ES UN COMBO / PROMO — TAP PARA ACTIVAR';
+    btn.style.background = 'transparent';
+    btn.style.borderColor = 'rgba(0,221,255,0.3)';
+    form.style.display = 'none';
+  }
+}
+
+function addComboLine(suffix) {
+  const container = document.getElementById('comboLines' + suffix);
+  if (!container) return;
+  const idx = container.children.length;
+  const opts = products.map(p => `<option value="${p.id}">${p.emoji} ${p.name}</option>`).join('');
+  const line = document.createElement('div');
+  line.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+  line.innerHTML = `
+    <select class="pf-input combo-product-select" style="flex:1;padding:6px 8px;font-size:13px;">
+      <option value="">-- Producto base --</option>
+      ${opts}
+    </select>
+    <input class="pf-input combo-qty-input" type="number" min="1" value="1"
+      style="width:65px;padding:6px 8px;font-size:13px;" placeholder="Cant.">
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
+  `;
+  container.appendChild(line);
+}
+
+function getComboLines(suffix) {
+  const container = document.getElementById('comboLines' + suffix);
+  if (!container) return [];
+  const lines = [];
+  // Each direct child div is one combo line
+  Array.from(container.children).forEach(line => {
+    const sel = line.querySelector('.combo-product-select');
+    const qty = line.querySelector('.combo-qty-input');
+    if (sel && sel.value && qty && parseInt(qty.value) > 0) {
+      lines.push({ productId: parseInt(sel.value), qty: parseInt(qty.value) || 1 });
+    }
+  });
+  return lines;
+}
+
+function addProduct() {
+  const name = document.getElementById('npName').value.trim();
+  const emoji = document.getElementById('npEmoji').value.trim() || '📦';
+  const price = parseInt(document.getElementById('npPrice').value) || 0;
+  const stock = parseInt(document.getElementById('npStock').value) || 0;
+  const isCombo = _isComboActive;
+
+  if (!name || !price) { showToast('⚠ NOMBRE Y PRECIO REQUERIDOS', 'red'); return; }
+
+  const newP = { id: Date.now(), name, emoji, price, stock, initialStock: stock, isCombo: false, comboLines: [] };
+
+  if (isCombo) {
+    const lines = getComboLines('New');
+    if (!lines.length) {
+      showToast('⚠ SELECCIONÁ AL MENOS UN PRODUCTO BASE PARA EL COMBO', 'red');
+      return;
+    }
+    // Validate all lines have a product selected
+    const invalid = lines.filter(l => !l.productId || isNaN(l.productId));
+    if (invalid.length) {
+      showToast('⚠ SELECCIONÁ EL PRODUCTO BASE EN CADA LÍNEA', 'red');
+      return;
+    }
+    newP.isCombo = true;
+    newP.comboLines = lines;
+    newP.stock = 9999;
+    newP.initialStock = 9999;
+    console.log('Saving combo with lines:', JSON.stringify(lines));
+  }
+
+  products.push(newP);
+  saveProducts();
+  pushStockToFirebase();
+  pushProductsToFirebase();
+  renderProducts();
+  _isComboActive = false;
+  renderAdminPanel(document.getElementById('panelContent'));
+  showToast('✓ PRODUCTO AGREGADO', 'green');
+}
+
+function changePins() {
+  const opPin = document.getElementById('newPinOp').value.trim();
+  const adminPin = document.getElementById('newPinAdmin').value.trim();
+  let changed = false;
+
+  if (opPin && opPin.length === 4 && /^[0-9]+$/.test(opPin)) {
+    PINS.operador = opPin; changed = true;
+  }
+  if (adminPin && adminPin.length === 4 && /^[0-9]+$/.test(adminPin)) {
+    PINS.admin = adminPin; changed = true;
+  }
+
+  if (!changed) {
+    showToast('⚠ INGRESÁ PINs DE 4 DÍGITOS', 'red');
+    return;
+  }
+
+  // Save to localStorage
+  localStorage.setItem('uh_pins', JSON.stringify(PINS));
+
+  // Push admin PIN to Firebase so dashboard can read it
+  if (window._firebaseReady && adminPin && adminPin.length === 4) {
+    try {
+      const db = window._db;
+      const refFn = window._ref;
+      window._update(refFn(db, 'underhertz/config'), { adminPin: PINS.admin });
+    } catch(e) {}
+  }
+
+  showToast('✓ PINs ACTUALIZADOS', 'green');
+}
+
+function toggleEditProduct(id) {
+  const form = document.getElementById('editform-' + id);
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveEditProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+
+  const name = document.getElementById('ep-name-' + id).value.trim();
+  const emoji = document.getElementById('ep-emoji-' + id).value.trim();
+  const price = parseInt(document.getElementById('ep-price-' + id).value) || 0;
+  const initialStock = parseInt(document.getElementById('ep-stock-' + id).value) || 0;
+
+  if (!name) { showToast('⚠ EL NOMBRE NO PUEDE ESTAR VACÍO', 'red'); return; }
+  if (price < 0) { showToast('⚠ EL PRECIO NO PUEDE SER NEGATIVO', 'red'); return; }
+
+  p.name = name;
+  p.emoji = emoji || '📦';
+  p.price = price;
+  p.initialStock = initialStock;
+
+  saveProducts();
+  updateProductInFirebase(p);
+
+  // Update products grid without re-rendering (preserves drag order)
+  renderProducts();
+
+  // Update only the product row info in admin panel — don't re-render whole panel
+  const rowEl = document.getElementById('prodrow-' + id);
+  if (rowEl) {
+    // Update the visible name/price/meta in the row header
+    const nameEl = rowEl.querySelector('.prod-row-name');
+    const metaEl = rowEl.querySelector('.prod-row-meta');
+    if (nameEl) nameEl.textContent = p.name;
+    if (metaEl) metaEl.innerHTML =
+      '$' + p.price.toLocaleString('es-AR') +
+      (p.isCombo
+        ? ' · COMBO · Descuenta: ' + (p.comboLines||[]).map(l => {
+            const base = products.find(x=>x.id===l.productId);
+            return (base?base.name:'?') + ' x' + l.qty;
+          }).join(' + ')
+        : ' · Stock: ' + p.stock + '/' + p.initialStock);
+    // Close the edit form
+    const form = document.getElementById('editform-' + id);
+    if (form) form.style.display = 'none';
+  }
+
+  showToast('✓ PRODUCTO ACTUALIZADO EN TODAS LAS BARRAS', 'green');
+}
+
+function editProduct(id, field, value) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  if (field === 'price') p.price = parseInt(value) || 0;
+  if (field === 'name') p.name = value.trim();
+  if (field === 'emoji') p.emoji = value.trim();
+  saveProducts();
+  updateProductInFirebase(p);
+  renderProducts();
+  showToast('✓ PRODUCTO ACTUALIZADO EN TODAS LAS BARRAS', 'green');
+}
+
+function deleteProduct(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  products = products.filter(p => p.id !== id);
+  saveProducts();
+  pushProductsToFirebase();
+  renderProducts();
+  renderAdminPanel(document.getElementById('panelContent'));
+  showToast('PRODUCTO ELIMINADO');
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+// ── EMOJI PICKER ──
+function toggleEmojiPicker(pickerId, inputId) {
+  // Close all other pickers first
+  document.querySelectorAll('.emoji-picker').forEach(p => {
+    if (p.id !== pickerId) p.classList.remove('open');
+  });
+  const picker = document.getElementById(pickerId);
+  if (picker) picker.classList.toggle('open');
+}
+
+function pickEmoji(inputId, pickerId, emoji) {
+  const input = document.getElementById(inputId);
+  if (input) input.value = emoji;
+  const picker = document.getElementById(pickerId);
+  if (picker) picker.classList.remove('open');
+}
+
+// Close pickers when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.emoji-picker-wrap')) {
+    document.querySelectorAll('.emoji-picker').forEach(p => p.classList.remove('open'));
+  }
+});
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  // PIN overlay keyboard support
+  const pinOpen = document.getElementById('pinOverlay') &&
+    document.getElementById('pinOverlay').style.display === 'flex';
+  if (pinOpen) {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    else if (e.key === 'Backspace') pinDel();
+    else if (e.key === 'Enter') pinConfirm();
+    return;
+  }
+  if (e.key === 'Escape') closePanel();
+  if (e.key === 'Enter' && document.getElementById('mainLayout').style.display !== 'none') {
+    if (!document.getElementById('panelOverlay').classList.contains('open')) {
+      const btn = document.getElementById('checkoutBtn');
+      if (!btn.disabled) processCheckout();
+    }
+  }
+});
+</script>
+</body>
+</html>
