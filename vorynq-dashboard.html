@@ -127,6 +127,29 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
 .online-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle;}
 .online-dot.on{background:var(--green);box-shadow:0 0 6px var(--green);}
 .online-dot.off{background:var(--red);}
+/* Gráfico por hora */
+.chart-box{background:var(--surface);border:1px solid var(--border);padding:12px 14px;position:relative;}
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.chart-peak{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray-light);}
+.hour-tabs{display:flex;gap:4px;}
+.hour-tab{background:var(--surface2);border:1px solid var(--border);color:var(--gray-light);padding:5px 10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;}
+.hour-tab.on{background:var(--blue);border-color:var(--blue);color:white;}
+#hourChart{position:relative;}
+#hourChart svg{display:block;}
+#hourChart .ax{font-family:'DM Mono',monospace;font-size:9px;fill:var(--gray-light);}
+.chart-tip{display:none;position:absolute;top:0;width:150px;background:#000;border:1px solid rgba(255,255,255,0.15);padding:6px 8px;font-family:'DM Mono',monospace;font-size:10px;line-height:1.5;color:var(--white);pointer-events:none;z-index:5;}
+/* Historial */
+.hist-row{display:grid;grid-template-columns:1fr 110px 60px 100px 90px;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);}
+.hist-row:last-child{border-bottom:none;}
+.hist-row.head{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;}
+.hist-row.on{background:rgba(0,85,255,0.1);}
+.hist-btn{background:rgba(0,85,255,0.15);border:1px solid rgba(0,85,255,0.45);color:var(--white);padding:7px 10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;}
+.hist-btn:hover{background:var(--blue);}
+.view-banner{display:none;position:sticky;top:56px;z-index:99;background:var(--orange);color:#1a0d00;padding:9px 20px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;align-items:center;justify-content:space-between;gap:10px;}
+.view-banner button{background:#1a0d00;color:var(--white);border:none;padding:7px 12px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;}
+body.viewing .view-banner{display:flex;}
+body.viewing .live-only{display:none !important;}
+@media(max-width:768px){.hist-row{grid-template-columns:1fr 90px 70px;}.hist-row>*:nth-child(3),.hist-row>*:nth-child(4){display:none;}}
 .no-data{padding:20px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--gray);letter-spacing:2px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;z-index:9999;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;background:var(--blue);color:white;}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -158,8 +181,9 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
   <div class="top-bar">
     <div class="top-logo">VORY<span>NQ</span></div>
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div><span id="liveText">CONECTANDO</span></div>
-    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.10-b</div></div>
+    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.10-c</div></div>
   </div>
+  <div class="view-banner" id="viewBanner"><span>📚 VIENDO HISTORIAL: <b id="viewName"></b> · los datos no cambian</span><button id="backLive">← VOLVER A EN VIVO</button></div>
   <div class="body">
     <div class="hero-stats">
       <div class="hstat main"><div class="hstat-label">Total recaudado</div><div class="hstat-val g" id="grandTotal">$0</div><div class="hstat-sub">todas las barras</div></div>
@@ -168,6 +192,13 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
       <div class="hstat c"><div class="hstat-label">Consumos org.</div><div class="hstat-val c" id="totalOrg">0</div><div class="hstat-sub">sin cargo</div></div>
     </div>
     <div class="section"><div class="sec-title">💰 Recaudación por barra</div><div class="barras-grid" id="barrasGrid"><div class="no-data">Esperando datos...</div></div></div>
+    <div class="section"><div class="sec-title">⏱ Ventas por hora</div>
+      <div class="chart-box">
+        <div class="chart-head"><div class="chart-peak" id="hourPeak"></div>
+          <div class="hour-tabs"><button class="hour-tab on" data-m="money">RECAUDACIÓN</button><button class="hour-tab" data-m="count">CANTIDAD DE VENTAS</button></div></div>
+        <div id="hourChart"><div class="no-data">Sin ventas aún</div></div>
+      </div>
+    </div>
     <div class="two-col">
       <div class="section"><div class="sec-title">🧾 Ventas <span id="salesCount" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);"></span></div>
         <div class="filters">
@@ -182,8 +213,12 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
       <div class="section"><div class="sec-title">💸 Retiros de caja</div><div class="retiros-box" id="retirosList"><div class="no-data">Sin retiros</div></div></div>
     </div>
     <div class="section"><div class="sec-title">🏆 Productos más vendidos</div><div class="rank-box" id="rankBox"><div class="no-data">Sin ventas aún</div></div></div>
-    <div class="section"><div class="sec-title">📦 Stock en tiempo real</div><div class="stock-grid" id="stockGrid"><div class="no-data">Cargando...</div></div></div>
-    <div class="section">
+    <div class="section"><div class="sec-title">📚 Historial de eventos</div>
+      <div class="rank-box" id="histList"><div class="no-data">Cargando...</div></div>
+      <button class="export-btn live-only" id="archiveBtn" style="width:auto;">💾 GUARDAR NOCHE ACTUAL EN EL HISTORIAL (SIN BORRAR)</button>
+    </div>
+    <div class="section live-only"><div class="sec-title">📦 Stock en tiempo real</div><div class="stock-grid" id="stockGrid"><div class="no-data">Cargando...</div></div></div>
+    <div class="section live-only">
       <div class="sec-title">🖥 Gestión de barras</div>
       <div id="barrasMgmt"><div class="no-data">Cargando...</div></div>
       <button class="export-btn" id="backupBtn" style="width:auto;margin-right:6px;">💾 DESCARGAR COPIA DE SEGURIDAD</button>
@@ -251,7 +286,8 @@ const fmt = n => '$'+(n||0).toLocaleString('es-AR');
 const PAGOS = { efectivo:'Efectivo', mercadopago:'Mercado Pago', tarjeta:'Tarjeta', organizador:'Organizador' };
 const pagoKey = s => s.organizer ? 'organizador' : (s.paymentMethod || 'efectivo');
 const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ST = { sales: [], retiros: [], products: {}, stock: {}, barras: {} };
+const ST = { sales: [], retiros: [], products: {}, stock: {}, barras: {} };   // lo que se muestra
+const LIVE = { sales: [], retiros: [], products: {}, stock: {} };             // datos en vivo
 
 function touch(){
   document.getElementById('lastUpdate').textContent='Actualizado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -272,12 +308,13 @@ onValue(ref(db,'.info/connected'), snap=>{
 
 // ── DATOS ──
 onValue(ref(db,'vorynq/sales'), snap => {
-  ST.sales = Object.entries(snap.val()||{}).map(([k,v]) => ({ ...v, _key:k }));
-  renderSales(); renderRanking(); touch();
+  LIVE.sales = Object.entries(snap.val()||{}).map(([k,v]) => ({ ...v, _key:k }));
+  if (VIEW) return; ST.sales = LIVE.sales;
+  renderSales(); renderRanking(); renderHourly(); touch();
 });
-onValue(ref(db,'vorynq/retiros'), snap => { ST.retiros = Object.values(snap.val()||{}); renderRetiros(); touch(); });
-onValue(ref(db,'vorynq/products'), snap => { ST.products = snap.val()||{}; renderStock(); renderRanking(); });
-onValue(ref(db,'vorynq/stock'), snap => { ST.stock = snap.val()||{}; renderStock(); });
+onValue(ref(db,'vorynq/retiros'), snap => { LIVE.retiros = Object.values(snap.val()||{}); if (VIEW) return; ST.retiros = LIVE.retiros; renderRetiros(); touch(); });
+onValue(ref(db,'vorynq/products'), snap => { LIVE.products = snap.val()||{}; if (VIEW) return; ST.products = LIVE.products; renderStock(); renderRanking(); });
+onValue(ref(db,'vorynq/stock'), snap => { LIVE.stock = snap.val()||{}; if (VIEW) return; ST.stock = LIVE.stock; renderStock(); });
 
 const validSales = () => ST.sales.filter(s => !s.anulada);
 
@@ -507,7 +544,7 @@ function downloadCSV(rows,name){
 document.getElementById('exportSalesBtn').addEventListener('click', async ()=>{
   if(!ST.sales.length && !ST.retiros.length){showToast('⚠ NO HAY DATOS PARA EXPORTAR','');return;}
   const data=buildExport();
-  const name='vorynq-'+fileStamp();
+  const name = VIEW ? 'vorynq-' + VIEW.nombre.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'-') : 'vorynq-'+fileStamp();
   try{
     const XLSX=await loadSheetJS();
     const wb=XLSX.utils.book_new();
@@ -527,6 +564,204 @@ document.getElementById('exportSalesBtn').addEventListener('click', async ()=>{
     setTimeout(()=>downloadCSV(data.productos,name+'-productos.csv'),1200);
     showToast('✓ EXPORTADO EN CSV','green');
   }
+});
+
+// ══════════════════════════════════════════════
+// VENTAS POR HORA (gráfico de barras, una sola serie)
+// ══════════════════════════════════════════════
+let hourMetric = 'money';
+function hourBuckets(){
+  const sales = validSales().filter(s=>!s.organizer && s.timestamp);
+  if (!sales.length) return [];
+  const H = 3600000;
+  const map = {};
+  sales.forEach(s=>{
+    const d = new Date(s.timestamp); d.setMinutes(0,0,0);
+    const k = d.getTime();
+    if (!map[k]) map[k] = { t:k, money:0, count:0 };
+    map[k].money += s.total||0; map[k].count++;
+  });
+  const keys = Object.keys(map).map(Number).sort((a,b)=>a-b);
+  const out = [];
+  for (let t = keys[0]; t <= keys[keys.length-1]; t += H) out.push(map[t] || { t, money:0, count:0 });
+  return out;
+}
+function niceMax(v){
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+const fmtShort = n => n >= 1e6 ? '$' + (n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'M' : n >= 1e3 ? '$' + Math.round(n/1e3) + 'k' : '$' + n;
+function renderHourly(){
+  const box = document.getElementById('hourChart');
+  const peakEl = document.getElementById('hourPeak');
+  if (!box) return;
+  const data = hourBuckets();
+  if (!data.length){ box.innerHTML = '<div class="no-data">Sin ventas aún</div>'; peakEl.textContent=''; return; }
+  const key = hourMetric;
+  const W = Math.max(280, box.clientWidth || 600), Hh = 220;
+  const m = { l:52, r:10, t:16, b:28 };
+  const iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const max = niceMax(Math.max(...data.map(d=>d[key])));
+  const slot = iw / data.length, bw = Math.max(4, Math.min(48, slot - 2));
+  const y = v => m.t + ih - (v / max) * ih;
+  const label = d => new Date(d.t).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+  const val = (d,k) => k === 'money' ? fmt(d.money) : d.count + (d.count === 1 ? ' venta' : ' ventas');
+  let g = '';
+  for (let i = 0; i <= 4; i++){
+    const v = max * i / 4, yy = y(v);
+    g += `<line x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}" stroke="rgba(255,255,255,${i?0.06:0.18})" stroke-width="1"/>`;
+    g += `<text x="${m.l-8}" y="${yy+3}" text-anchor="end" class="ax">${key==='money'?fmtShort(v):Math.round(v)}</text>`;
+  }
+  const step = Math.ceil(data.length / Math.max(1, Math.floor(iw / 46)));
+  let bars = '';
+  data.forEach((d,i)=>{
+    const x = m.l + i*slot + (slot-bw)/2, v = d[key], top = y(v), h = m.t + ih - top;
+    if (h > 0){
+      const r = Math.min(4, bw/2, h);
+      bars += `<path d="M${x},${m.t+ih} V${top+r} Q${x},${top} ${x+r},${top} H${x+bw-r} Q${x+bw},${top} ${x+bw},${top+r} V${m.t+ih} Z" fill="#3377FF"/>`;
+    }
+    bars += `<rect x="${m.l+i*slot}" y="${m.t}" width="${slot}" height="${ih}" fill="transparent" data-i="${i}" class="hit"/>`;
+    if (i % step === 0) bars += `<text x="${m.l+i*slot+slot/2}" y="${Hh-8}" text-anchor="middle" class="ax">${label(d).slice(0,2)}h</text>`;
+  });
+  box.innerHTML = `<svg width="${W}" height="${Hh}" role="img" aria-label="Ventas por hora">${g}${bars}</svg><div class="chart-tip" id="hourTip"></div>`;
+  const peak = data.reduce((a,b)=>b[key]>a[key]?b:a, data[0]);
+  peakEl.textContent = `Hora pico: ${label(peak)} a ${label({t:peak.t+3600000})} · ${val(peak,'money')} · ${val(peak,'count')}`;
+  const tip = document.getElementById('hourTip');
+  box.querySelectorAll('.hit').forEach(r=>{
+    r.addEventListener('mouseenter', ()=>{
+      const d = data[+r.dataset.i];
+      tip.innerHTML = `<b>${label(d)} – ${label({t:d.t+3600000})}</b><br>${val(d,'money')} · ${val(d,'count')}`;
+      tip.style.display = 'block';
+      const bx = +r.getAttribute('x') + slot/2;
+      tip.style.left = Math.min(Math.max(bx - 70, 0), W - 150) + 'px';
+      r.setAttribute('fill','rgba(255,255,255,0.04)');
+    });
+    r.addEventListener('mouseleave', ()=>{ tip.style.display='none'; r.setAttribute('fill','transparent'); });
+  });
+}
+document.querySelectorAll('.hour-tab').forEach(b=>b.addEventListener('click', ()=>{
+  hourMetric = b.dataset.m;
+  document.querySelectorAll('.hour-tab').forEach(x=>x.classList.toggle('on', x===b));
+  renderHourly();
+}));
+window.addEventListener('resize', ()=>{ clearTimeout(window._rz); window._rz = setTimeout(renderHourly, 150); });
+
+// ══════════════════════════════════════════════
+// HISTORIAL DE EVENTOS
+// Cada noche se guarda en vorynq/historial/<id> (datos completos) y un
+// resumen liviano en vorynq/historialIndex/<id> (para la lista).
+// ══════════════════════════════════════════════
+let VIEW = null; // evento del historial que se está viendo (null = en vivo)
+let HIST = {};
+
+function summarize(sales, retiros){
+  const valid = sales.filter(s=>!s.anulada);
+  const paid = valid.filter(s=>!s.organizer);
+  const total = paid.reduce((a,s)=>a+(s.total||0),0);
+  const ts = sales.map(s=>new Date(s.timestamp).getTime()).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+  const byPago = {};
+  paid.forEach(s=>{ const k=pagoKey(s); byPago[k]=(byPago[k]||0)+(s.total||0); });
+  const barras = [...new Set(sales.map(s=>s.barra).filter(Boolean))];
+  return {
+    total, ventas: paid.length, org: valid.filter(s=>s.organizer).length,
+    anuladas: sales.length - valid.length,
+    retiros: retiros.reduce((a,r)=>a+(Number(r.monto)||0),0),
+    ticketPromedio: paid.length ? Math.round(total/paid.length) : 0,
+    desde: ts[0] || null, hasta: ts[ts.length-1] || null,
+    byPago, barras: barras.length
+  };
+}
+
+async function archiveNight(name){
+  const sales = LIVE.sales.map(({_key, ...s}) => s);
+  const retiros = LIVE.retiros;
+  if (!sales.length && !retiros.length) return null;
+  const id = 'ev' + Date.now();
+  const meta = { id, nombre: name, guardado: Date.now(), ...summarize(sales, retiros) };
+  const asObj = arr => { const o={}; arr.forEach((x,i)=>{ o[x.id || ('i'+i)] = x; }); return o; };
+  await set(ref(db,'vorynq/historial/'+id), { meta, sales: asObj(sales), retiros: asObj(retiros), products: LIVE.products||{}, stock: LIVE.stock||{} });
+  await set(ref(db,'vorynq/historialIndex/'+id), meta);
+  return id;
+}
+
+function defaultEventName(){
+  const ts = LIVE.sales.map(s=>new Date(s.timestamp).getTime()).filter(n=>!isNaN(n));
+  const d = ts.length ? new Date(Math.min(...ts)) : new Date();
+  return 'Evento ' + d.toLocaleDateString('es-AR');
+}
+
+// Pregunta el nombre y guarda. Devuelve false si el usuario canceló.
+async function askAndArchive(){
+  if (!LIVE.sales.length && !LIVE.retiros.length) return true;
+  const name = prompt('Nombre para guardar esta noche en el HISTORIAL:\n(dejá vacío si no querés guardarla)', defaultEventName());
+  if (name === null) return false;
+  if (name.trim()) { await archiveNight(name.trim()); showToast('✓ NOCHE GUARDADA EN EL HISTORIAL','green'); }
+  return true;
+}
+
+onValue(ref(db,'vorynq/historialIndex'), snap=>{ HIST = snap.val()||{}; renderHistList(); });
+
+function renderHistList(){
+  const el = document.getElementById('histList');
+  const list = Object.values(HIST).filter(Boolean).sort((a,b)=>(b.desde||b.guardado)-(a.desde||a.guardado));
+  if (!list.length){ el.innerHTML = '<div class="no-data">Todavía no hay eventos guardados. Se guardan al poner las ventas en cero o al resetear la noche.</div>'; return; }
+  const maxT = Math.max(...list.map(e=>e.total||0), 1);
+  const f = t => t ? new Date(t).toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+  const h = t => t ? new Date(t).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) : '';
+  el.innerHTML = `<div class="hist-row head"><span>Evento</span><span style="text-align:right">Recaudado</span><span style="text-align:right">Ventas</span><span style="text-align:right">Ticket prom.</span><span></span></div>` +
+    list.map(e=>`<div class="hist-row ${VIEW&&VIEW.id===e.id?'on':''}">
+      <div><div class="rank-name">${esc(e.nombre)}</div><div class="mgmt-meta">${f(e.desde)}${e.desde?' · '+h(e.desde)+' a '+h(e.hasta):''} · ${e.barras||0} barras${e.anuladas?' · '+e.anuladas+' anuladas':''}</div>
+        <div class="rank-track"><div class="rank-fill" style="width:${Math.round((e.total||0)/maxT*100)}%"></div></div></div>
+      <span class="rank-money">${fmt(e.total)}</span><span class="rank-num">${e.ventas||0}</span><span class="rank-num">${fmt(e.ticketPromedio)}</span>
+      <span style="display:flex;gap:4px;justify-content:flex-end;"><button class="hist-btn" data-view="${esc(e.id)}">VER</button><button class="del-btn" data-del="${esc(e.id)}" title="Eliminar">✕</button></span>
+    </div>`).join('');
+  el.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click', ()=>openEvent(b.dataset.view)));
+  el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = HIST[b.dataset.del];
+    if (!confirm(`¿Eliminar "${e.nombre}" del historial?\n\nNo se puede deshacer.`)) return;
+    await remove(ref(db,'vorynq/historial/'+e.id));
+    await remove(ref(db,'vorynq/historialIndex/'+e.id));
+    if (VIEW && VIEW.id === e.id) backToLive();
+    showToast('✓ EVENTO ELIMINADO','green');
+  }));
+}
+
+async function openEvent(id){
+  try{
+    const data = (await get(ref(db,'vorynq/historial/'+id))).val();
+    if (!data){ showToast('⚠ NO SE ENCONTRÓ EL EVENTO',''); return; }
+    VIEW = data.meta;
+    ST.sales = Object.entries(data.sales||{}).map(([k,v])=>({ ...v, _key:k }));
+    ST.retiros = Object.values(data.retiros||{});
+    ST.products = data.products||{};
+    ST.stock = data.stock||{};
+    document.body.classList.add('viewing');
+    document.getElementById('viewName').textContent = VIEW.nombre;
+    renderAll();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }catch(e){ showToast('⚠ ERROR: '+e.message,''); console.error(e); }
+}
+
+function backToLive(){
+  VIEW = null;
+  Object.assign(ST, { sales:LIVE.sales, retiros:LIVE.retiros, products:LIVE.products, stock:LIVE.stock });
+  document.body.classList.remove('viewing');
+  renderAll();
+}
+document.getElementById('backLive').addEventListener('click', backToLive);
+
+function renderAll(){
+  ['fBarra','fPago','fEstado'].forEach(id=>document.getElementById(id).value='');
+  renderSales(); renderRetiros(); renderRanking(); renderStock(); renderHourly(); renderHistList();
+}
+
+document.getElementById('archiveBtn').addEventListener('click', async ()=>{
+  if (!LIVE.sales.length && !LIVE.retiros.length){ showToast('⚠ NO HAY VENTAS PARA GUARDAR',''); return; }
+  const name = prompt('Nombre para guardar la noche actual en el historial:\n(las ventas NO se borran)', defaultEventName());
+  if (!name || !name.trim()) return;
+  try{ await archiveNight(name.trim()); showToast('✓ GUARDADO EN EL HISTORIAL','green'); }
+  catch(e){ alert('⚠ No se pudo guardar: '+e.message); }
 });
 
 // ── COPIA DE SEGURIDAD ──
@@ -550,6 +785,7 @@ document.getElementById('backupBtn').addEventListener('click', async ()=>{
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
   if(!confirm('¿RESETEAR TODA LA NOCHE?\n\nEsto borra ventas, retiros y barras en TODAS las PCs.\nEl stock vuelve al inicial.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
   try{
+    if(!(await askAndArchive())) return;
     await downloadBackup('antes-del-reset');
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
@@ -575,6 +811,8 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
 document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
   if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nNo se puede deshacer.'))return;
   const btn=document.getElementById('zeroSalesBtn');
+  try{ if(!(await askAndArchive())) return; }
+  catch(e){ alert('⚠ No se pudo guardar en el historial: '+e.message+'\n\nNo se borró nada.'); return; }
   btn.disabled=true; btn.textContent='⏳ PONIENDO VENTAS EN CERO…';
   try{
     await set(ref(db,'vorynq/sales'),null);
