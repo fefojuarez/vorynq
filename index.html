@@ -737,6 +737,7 @@ body {
       <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
 
       <div class="firebase-note" id="setupConn">⏳ CONECTANDO CON EL SERVIDOR…</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.10-b</div>
 
       <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
     </div>
@@ -1209,6 +1210,9 @@ function renderConnStatus() {
 function watchConnection() {
   if (!window._firebaseReady || watchConnection._done) return;
   watchConnection._done = true;
+  window._onValue(window._ref(window._db, '.info/serverTimeOffset'), snap => {
+    window._srvOffset = Number(snap.val()) || 0;
+  });
   window._onValue(window._ref(window._db, '.info/connected'), snap => {
     const was = fbConnected;
     fbConnected = snap.val() === true;
@@ -1551,6 +1555,7 @@ function processCheckout() {
     paymentMethod: isOrg ? 'organizador' : SESSION.paymentMethod,
     organizer: SESSION.selectedOrg || null,
     timestamp: now.toISOString(),
+    srvTs: now.getTime() + (window._srvOffset || 0),
   };
   salesLog.push(sale);
   localStorage.setItem('vq_sales', JSON.stringify(salesLog));
@@ -2195,6 +2200,7 @@ function registrarRetiro() {
     nota,
     time: now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}),
     timestamp: now.toISOString(),
+    srvTs: now.getTime() + (window._srvOffset || 0),
   };
   retiroLog.push(entry);
   localStorage.setItem('vq_retiros', JSON.stringify(retiroLog));
@@ -2414,7 +2420,10 @@ function applyRemoteReset(resetAt) {
   const last = Number(localStorage.getItem('vq_lastReset') || 0);
   if (resetAt <= last) return;
   localStorage.setItem('vq_lastReset', String(resetAt));
-  const after = x => x && x.timestamp && new Date(x.timestamp).getTime() >= resetAt;
+  // Se compara con la hora del servidor, así no importa si los relojes de los equipos difieren
+  const off = window._srvOffset || 0;
+  const tsOf = x => x.srvTs || (x.timestamp ? new Date(x.timestamp).getTime() + off : 0);
+  const after = x => x && tsOf(x) >= resetAt;
   const before = salesLog.length + retiroLog.length;
   salesLog = salesLog.filter(after);
   retiroLog = retiroLog.filter(after);
@@ -2442,7 +2451,7 @@ function resetNight() {
   if (!confirm('¿Resetear todos los datos de esta noche? Esto borrará ventas, retiros y totales en todas las barras.')) return;
   salesLog = []; retiroLog = []; totalLocal = 0;
   pendingOps = pendingOps.filter(o => !/^vorynq\/(sales|retiros)\//.test(o.path)); savePending();
-  const resetAt = Date.now();
+  const resetAt = Date.now() + (window._srvOffset || 0);
   localStorage.setItem('vq_lastReset', String(resetAt));
   queueWrite({ kind: 'update', path: 'vorynq/config', value: { resetAt } });
   localStorage.setItem('vq_sales', '[]');

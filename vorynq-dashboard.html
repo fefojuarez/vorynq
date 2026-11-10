@@ -158,7 +158,7 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
   <div class="top-bar">
     <div class="top-logo">VORY<span>NQ</span></div>
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div><span id="liveText">CONECTANDO</span></div>
-    <div class="top-time" id="lastUpdate">Conectando...</div>
+    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.10-b</div></div>
   </div>
   <div class="body">
     <div class="hero-stats">
@@ -232,7 +232,7 @@ function showToast(msg,type=''){
 <!-- Firebase module script - ALL firebase logic here -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, onValue, remove, set, update, get }
+import { getDatabase, ref, onValue, remove, set, update, get, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const firebaseConfig = {
@@ -555,7 +555,7 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
     await set(ref(db,'vorynq/retiros'),null);
     await set(ref(db,'vorynq/barras'),null);
     // Avisar a todas las barras que borren sus ventas y totales locales
-    await update(ref(db,'vorynq/config'),{resetAt:Date.now()});
+    await update(ref(db,'vorynq/config'),{resetAt:serverTimestamp()});
     // Reset stock
     const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'vorynq/products'),s=>{u();res(s);});});
     const products=productsSnap.val();
@@ -573,16 +573,37 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
 
 // ── VENTAS EN CERO ──
 document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
-  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre y resumen).\nEl stock y los productos NO cambian.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
+  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
+  const btn=document.getElementById('zeroSalesBtn');
+  btn.disabled=true; btn.textContent='⏳ PONIENDO VENTAS EN CERO…';
   try{
     await downloadBackup('antes-de-ventas-en-cero');
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
-    await update(ref(db,'vorynq/config'),{resetAt:Date.now()});
-    showToast('✓ VENTAS EN CERO EN TODAS LAS BARRAS','green');
+    // "Vendidos" vuelve a 0: el stock actual pasa a ser el stock inicial
+    const prods=(await get(ref(db,'vorynq/products'))).val()||{};
+    const stock=(await get(ref(db,'vorynq/stock'))).val()||{};
+    const upd={};
+    Object.entries(prods).forEach(([k,p])=>{
+      if(!p||p.isCombo)return;
+      const cur=stock[p.id]!==undefined?stock[p.id]:p.stock;
+      upd[k+'/initialStock']=cur; upd[k+'/stock']=cur;
+    });
+    if(Object.keys(upd).length) await update(ref(db,'vorynq/products'),upd);
+    // Avisar a todas las barras (usa la hora del servidor)
+    await update(ref(db,'vorynq/config'),{resetAt:serverTimestamp()});
+    // Verificar que quedó vacío
+    const check=(await get(ref(db,'vorynq/sales'))).val();
+    if(check&&Object.keys(check).length){
+      alert('⚠ Atención: todavía quedan '+Object.keys(check).length+' ventas en la base. Puede que una barra las esté volviendo a subir. Recargá todas las barras con Ctrl+F5 y repetí.');
+    } else {
+      showToast('✓ VENTAS EN CERO EN TODAS LAS BARRAS','green');
+    }
   }catch(e){
-    showToast('⚠ ERROR: '+e.message,'');
     console.error(e);
+    alert('⚠ No se pudieron poner las ventas en cero.\n\nError: '+e.message+'\n\nRevisá las reglas de Firebase y la conexión.');
+  }finally{
+    btn.disabled=false; btn.textContent='🧾 PONER VENTAS EN CERO';
   }
 });
 
