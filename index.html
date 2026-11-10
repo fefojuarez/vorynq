@@ -9,21 +9,20 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp }
+import { getDatabase, ref, set, get, onValue, update, push, serverTimestamp, increment, onDisconnect }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 // ═══════════════════════════════════════════════
 // FIREBASE CONFIG — Reemplazá con tus datos
 // ═══════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "AIzaSyDhVEKeqhvVMrqShoRVSy2f0eb8W_c9hj4",
-  authDomain: "barra-underhertz.firebaseapp.com",
-  databaseURL: "https://barra-underhertz-default-rtdb.firebaseio.com",
-  projectId: "barra-underhertz",
-  storageBucket: "barra-underhertz.firebasestorage.app",
-  messagingSenderId: "716266397341",
-  appId: "1:716266397341:web:c9d3b9b5a1ba45937e3e74",
-  measurementId: "G-2SSJVNXZV8"
+  apiKey: "AIzaSyAk9o3DwTQ0b7CZa555DIEHbTY5Ype8yGI",
+  authDomain: "vorynq-79e90.firebaseapp.com",
+  databaseURL: "https://vorynq-79e90-default-rtdb.firebaseio.com",
+  projectId: "vorynq-79e90",
+  storageBucket: "vorynq-79e90.firebasestorage.app",
+  messagingSenderId: "814265036566",
+  appId: "1:814265036566:web:d8c34080d3954ccbec6a37"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -36,6 +35,8 @@ window._onValue = onValue;
 window._update = update;
 window._push = push;
 window._serverTimestamp = serverTimestamp;
+window._increment = increment;
+window._onDisconnect = onDisconnect;
 window._firebaseReady = true;
 document.dispatchEvent(new Event('firebaseReady'));
 </script>
@@ -126,6 +127,34 @@ body {
   color:var(--orange); letter-spacing:1px; line-height:1.7;
 }
 .firebase-note a { color:var(--cyan); }
+.firebase-note.ok { background:rgba(0,204,102,0.08); border-color:rgba(0,204,102,0.3); color:var(--green); }
+.firebase-note.bad { background:rgba(255,34,68,0.08); border-color:rgba(255,34,68,0.3); color:var(--red); }
+/* Indicador de conexión */
+.conn-pill { display:flex; align-items:center; gap:6px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; padding:4px 9px; border:1px solid var(--border); white-space:nowrap; color:var(--gray-light); }
+.conn-dot { width:8px; height:8px; border-radius:50%; background:var(--gray); flex-shrink:0; }
+.conn-pill.on { color:var(--green); border-color:rgba(0,204,102,0.35); }
+.conn-pill.on .conn-dot { background:var(--green); }
+.conn-pill.off { color:var(--red); border-color:rgba(255,34,68,0.45); background:rgba(255,34,68,0.08); }
+.conn-pill.off .conn-dot { background:var(--red); animation:connBlink 1s ease-in-out infinite; }
+.conn-pill.sync { color:var(--orange); border-color:rgba(255,136,0,0.4); }
+.conn-pill.sync .conn-dot { background:var(--orange); animation:connBlink 1s ease-in-out infinite; }
+@keyframes connBlink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+/* Alerta de stock bajo */
+.low-stock-bar { display:none; flex-shrink:0; background:rgba(255,136,0,0.12); border-bottom:1px solid rgba(255,136,0,0.35); color:var(--orange); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; padding:7px 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.low-stock-bar.show { display:block; }
+.low-stock-bar b { color:var(--white); }
+.low-stock-bar .out { color:var(--red); }
+/* Ventas / anulación */
+.sale-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); margin-bottom:6px; background:var(--black); }
+.sale-row.anulada { opacity:0.55; }
+.sale-row.anulada .sale-amt { text-decoration:line-through; }
+.sale-info { flex:1; min-width:0; }
+.sale-top { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--gray-light); margin-bottom:3px; }
+.sale-items { font-size:12px; }
+.sale-amt { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:1px; color:var(--green); white-space:nowrap; }
+.sale-tag { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--red); }
+.annul-btn { background:rgba(255,34,68,0.1); border:1px solid rgba(255,34,68,0.35); color:var(--red); padding:7px 10px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; white-space:nowrap; }
+.annul-btn:hover { background:var(--red); color:white; }
 
 /* ── TOP BAR ── */
 #topBar {
@@ -707,14 +736,7 @@ body {
       <label class="setup-label">Tu nombre (operador)</label>
       <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
 
-      <div class="firebase-note">
-        ⚠ CONFIGURACIÓN FIREBASE REQUERIDA<br><br>
-        Para sincronizar las 4 barras necesitás una cuenta de Firebase gratuita:<br>
-        1. Entrá a <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a><br>
-        2. Creá un proyecto → Realtime Database → Modo test<br>
-        3. Copiá tu configuración en el código (línea ~25)<br><br>
-        Mientras tanto el sistema funciona en modo LOCAL (sin sync entre barras).
-      </div>
+      <div class="firebase-note" id="setupConn">⏳ CONECTANDO CON EL SERVIDOR…</div>
 
       <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
     </div>
@@ -729,11 +751,13 @@ body {
   </div>
   <div class="top-event" id="topEventName">—</div>
   <div style="display:flex;align-items:center;gap:12px;">
+    <div class="conn-pill" id="connPill" title="Estado de sincronización"><span class="conn-dot"></span><span id="connText">CONECTANDO</span></div>
     <div>
       <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gray-light);letter-spacing:1px;">ESTA BARRA</div>
       <div class="top-total" id="topTotalLocal">$0</div>
     </div>
     <div class="top-btns">
+      <button class="top-btn" onclick="openPanel('ventas')">🧾 Ventas</button>
       <button class="top-btn" onclick="openPanel('stock')">📦 Stock</button>
       <button class="top-btn" onclick="openPanel('retiro')">💰 Retiro</button>
       <button class="top-btn" onclick="openPanel('resumen')">📊 Resumen</button>
@@ -742,6 +766,9 @@ body {
     </div>
   </div>
 </div>
+
+<!-- ══ ALERTA STOCK BAJO ══ -->
+<div class="low-stock-bar" id="lowStockBar"></div>
 
 <!-- ══ MAIN LAYOUT ══ -->
 <div id="mainLayout" style="display:none;">
@@ -834,6 +861,22 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════
+// MIGRACIÓN DE DATOS LOCALES
+// El sistema original (BarraUnder) usa el mismo dominio y las claves 'uh_'.
+// VORYNQ usa claves propias 'vq_' para no mezclar datos. La primera vez copia
+// solo la configuración (PINs, evento, productos), nunca las ventas.
+// ═══════════════════════════════════════════════
+try {
+  if (!localStorage.getItem('vq_migrated')) {
+    ['pins', 'eventConfig', 'products'].forEach(k => {
+      const old = localStorage.getItem('uh_' + k);
+      if (old !== null && localStorage.getItem('vq_' + k) === null) localStorage.setItem('vq_' + k, old);
+    });
+    localStorage.setItem('vq_migrated', '1');
+  }
+} catch(e) {}
+
+// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
 let SESSION = {
@@ -845,6 +888,7 @@ let SESSION = {
   organizers: ['Organizador 1', 'Organizador 2'],
   selectedOrg: null,
   paymentMethod: 'efectivo',
+  lowStock: 10,
 };
 
 // ─── PIN SYSTEM ───
@@ -917,7 +961,7 @@ function pinConfirm() {
 }
 
 // Load saved PINs from localStorage
-const savedPins = JSON.parse(localStorage.getItem('uh_pins') || 'null');
+const savedPins = JSON.parse(localStorage.getItem('vq_pins') || 'null');
 if (savedPins && savedPins.operador && savedPins.admin) { PINS = { operador: savedPins.operador, admin: savedPins.admin }; }
 
 // Shake keyframe via JS
@@ -925,17 +969,9 @@ const shakeStyle = document.createElement('style');
 shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}';
 document.head.appendChild(shakeStyle);
 
-// Keyboard support for PIN
-document.addEventListener('keydown', e => {
-  if (document.getElementById('pinOverlay').style.display !== 'none') {
-    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
-    else if (e.key === 'Backspace') pinDel();
-    else if (e.key === 'Enter') pinConfirm();
-  }
-});
 
 let cart = [];
-let products = JSON.parse(localStorage.getItem('uh_products') || 'null') || [
+let products = JSON.parse(localStorage.getItem('vq_products') || 'null') || [
   { id:1, name:'Cerveza', emoji:'🍺', price:2500, stock:100, initialStock:100 },
   { id:2, name:'Fernet', emoji:'🥃', price:3500, stock:80, initialStock:80 },
   { id:3, name:'Agua', emoji:'💧', price:1000, stock:150, initialStock:150 },
@@ -944,9 +980,9 @@ let products = JSON.parse(localStorage.getItem('uh_products') || 'null') || [
   { id:6, name:'Shot', emoji:'🔥', price:1800, stock:60, initialStock:60 },
 ];
 
-let salesLog = JSON.parse(localStorage.getItem('uh_sales') || '[]');
-let retiroLog = JSON.parse(localStorage.getItem('uh_retiros') || '[]');
-let totalLocal = parseInt(localStorage.getItem('uh_total') || '0');
+let salesLog = JSON.parse(localStorage.getItem('vq_sales') || '[]');
+let retiroLog = JSON.parse(localStorage.getItem('vq_retiros') || '[]');
+let totalLocal = parseInt(localStorage.getItem('vq_total') || '0');
 
 // Firebase refs
 let dbRef = null;
@@ -968,11 +1004,12 @@ function startSession() {
   document.getElementById('mainLayout').style.display = 'flex';
   document.getElementById('topBarraName').textContent = barra.toUpperCase();
 
-    const saved = JSON.parse(localStorage.getItem('uh_eventConfig') || '{}');
+    const saved = JSON.parse(localStorage.getItem('vq_eventConfig') || '{}');
     if (saved.eventName) SESSION.eventName = saved.eventName;
     if (saved.eventDate) SESSION.eventDate = saved.eventDate;
     if (saved.eventLocation) SESSION.eventLocation = saved.eventLocation;
     if (saved.organizers) SESSION.organizers = saved.organizers;
+    if (saved.lowStock !== undefined) SESSION.lowStock = saved.lowStock;
 
     document.getElementById('topEventName').textContent =
       SESSION.eventName + (SESSION.eventDate ? ' · ' + SESSION.eventDate : '');
@@ -980,7 +1017,9 @@ function startSession() {
     updateTotalDisplay();
     renderProducts();
     renderOrgBtns();
+    checkLowStock(true);
     initFirebase();
+    renderConnStatus();
 }
 
 // ═══════════════════════════════════════════════
@@ -994,7 +1033,7 @@ function initFirebase() {
   try {
     const db = window._db;
     const refFn = window._ref;
-    dbRef = refFn(db, 'underhertz/stock');
+    dbRef = refFn(db, 'vorynq/stock');
 
     // Listen for stock changes from other barras
     window._onValue(dbRef, (snapshot) => {
@@ -1007,20 +1046,19 @@ function initFirebase() {
       });
       saveProducts();
       renderProducts();
+      checkLowStock();
     });
 
     // Listen for product catalog changes (prices, names, new products)
-    const productsRef = refFn(db, 'underhertz/products');
+    const productsRef = refFn(db, 'vorynq/products');
     window._onValue(productsRef, (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        // First time: push local products to Firebase
-        pushProductsToFirebase();
+      const fbProducts = data ? Object.values(data).filter(Boolean) : [];
+      if (!fbProducts.length) {
+        // Base VORYNQ vacía: traer el catálogo del sistema original (una sola vez)
+        migrateFromOriginal();
         return;
       }
-      // Merge Firebase products into local, preserving stock
-      const fbProducts = Object.values(data);
-      if (fbProducts.length === 0) { pushProductsToFirebase(); return; }
 
       // Update local products from Firebase (prices, names, emoji)
       // but keep local stock as source of truth (stock is synced separately)
@@ -1031,28 +1069,203 @@ function initFirebase() {
           stock: local ? local.stock : fp.stock,
         };
       });
+      // Respetar el orden de la carta (Firebase devuelve los productos ordenados por id)
+      if (newProducts.some(p => typeof p.orden === 'number')) {
+        newProducts.sort((a, b) => (a.orden ?? 1e9) - (b.orden ?? 1e9));
+      }
       products = newProducts;
       saveProducts();
       renderProducts();
     });
 
-    // Register this barra in Firebase
-    const barraRef = refFn(db, 'underhertz/barras/' + SESSION.barra.replace(/[^a-zA-Z0-9]/g,'_'));
-    window._set(barraRef, { name: SESSION.barra, operador: SESSION.operador, lastSeen: new Date().toISOString() });
+    // Configuración compartida por todas las barras (stock bajo y PINs)
+    window._onValue(refFn(db, 'vorynq/config'), snap => {
+      const cfg = snap.val() || {};
+      const v = parseInt(cfg.lowStock);
+      if (!isNaN(v) && v >= 0) { SESSION.lowStock = v; checkLowStock(true); }
+      let pinsChanged = false;
+      if (/^\d{4}$/.test(cfg.adminPin || '') && cfg.adminPin !== PINS.admin) { PINS.admin = cfg.adminPin; pinsChanged = true; }
+      if (/^\d{4}$/.test(cfg.operadorPin || '') && cfg.operadorPin !== PINS.operador) { PINS.operador = cfg.operadorPin; pinsChanged = true; }
+      if (pinsChanged) localStorage.setItem('vq_pins', JSON.stringify(PINS));
+    });
 
-    showToast('✓ CONECTADO A FIREBASE', 'green');
+    // Registrar esta barra (con estado en línea / desconectada)
+    watchConnection();
+    if (fbConnected) registerBarraPresence();
+
+    // Reenviar ventas que quedaron pendientes de una sesión anterior
+    flushPending();
+    renderConnStatus();
   } catch(e) {
     console.log('Firebase not configured, running local mode');
   }
 }
 
-function pushStockToFirebase() {
-  if (!window._firebaseReady || !dbRef) return;
+function pushStockToFirebase(onlyIds) {
+  // Ajuste manual de stock (valor absoluto). Si se pasan ids, solo se escriben esos.
+  const stockData = {};
+  products.forEach(p => {
+    if (!onlyIds || onlyIds.includes(p.id)) stockData[p.id] = p.stock;
+  });
+  if (!Object.keys(stockData).length) return;
+  queueWrite({ kind: 'update', path: 'vorynq/stock', value: stockData });
+}
+
+// ═══════════════════════════════════════════════
+// COLA DE ESCRITURAS (ventas sin internet)
+// Cada escritura se guarda en el dispositivo hasta que Firebase la confirma.
+// Si la página se cierra o recarga sin conexión, se reenvía al volver a abrir.
+// ═══════════════════════════════════════════════
+const PENDING_KEY = 'vq_pending';
+let pendingOps = [];
+try { pendingOps = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch(e) { pendingOps = []; }
+const inflightOps = new Set();
+let fbConnected = false;
+
+function savePending() {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify(pendingOps)); } catch(e) {}
+  renderConnStatus();
+}
+
+function newId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function queueWrite(op) {
+  op.opId = newId();
+  pendingOps.push(op);
+  savePending();
+  sendOp(op);
+}
+
+function sendOp(op) {
+  if (!window._firebaseReady || inflightOps.has(op.opId)) return;
+  inflightOps.add(op.opId);
   try {
-    const stockData = {};
-    products.forEach(p => { stockData[p.id] = p.stock; });
-    window._set(dbRef, stockData);
-  } catch(e) {}
+    const r = window._ref(window._db, op.path);
+    let pr;
+    if (op.kind === 'set') pr = window._set(r, op.value);
+    else if (op.kind === 'update') pr = window._update(r, op.value);
+    else if (op.kind === 'incr') {
+      const upd = {};
+      Object.entries(op.value).forEach(([k, d]) => { upd[k] = window._increment(d); });
+      pr = window._update(r, upd);
+    }
+    pr.then(() => {
+      pendingOps = pendingOps.filter(o => o.opId !== op.opId);
+      inflightOps.delete(op.opId);
+      savePending();
+    }).catch(err => {
+      inflightOps.delete(op.opId);
+      console.error('Error de escritura en Firebase', err);
+    });
+  } catch(e) {
+    inflightOps.delete(op.opId);
+    console.error(e);
+  }
+}
+
+function flushPending() {
+  pendingOps.forEach(sendOp);
+}
+
+// Descuenta (delta negativo) o devuelve (delta positivo) stock sin pisar a otras barras
+function changeStockInFirebase(deltas) {
+  const clean = {};
+  Object.entries(deltas).forEach(([id, d]) => { if (d) clean[id] = d; });
+  if (Object.keys(clean).length) queueWrite({ kind: 'incr', path: 'vorynq/stock', value: clean });
+}
+
+// ═══════════════════════════════════════════════
+// INDICADOR DE CONEXIÓN
+// ═══════════════════════════════════════════════
+function renderConnStatus() {
+  const pill = document.getElementById('connPill');
+  const txt = document.getElementById('connText');
+  const setup = document.getElementById('setupConn');
+  // Cantidad de ventas/retiros sin subir (cada venta incluye también su movimiento de stock)
+  const nMov = pendingOps.filter(o => /^vorynq\/(sales|retiros)\//.test(o.path) && o.kind === 'set').length;
+  const n = nMov || pendingOps.length;
+  let cls, label, setupCls, setupTxt;
+  if (!window._firebaseReady) {
+    cls = 'off'; label = 'SIN SERVIDOR' + (n ? ' · ' + n + ' PEND.' : '');
+    setupCls = 'bad'; setupTxt = '✕ NO SE PUDO CARGAR EL SERVIDOR. REVISÁ INTERNET Y RECARGÁ LA PÁGINA. Las ventas se guardan en este equipo.';
+  } else if (!fbConnected) {
+    cls = 'off'; label = 'SIN CONEXIÓN' + (n ? ' · ' + n + ' PEND.' : '');
+    setupCls = 'bad'; setupTxt = '⏳ SIN CONEXIÓN CON EL SERVIDOR. Se puede vender igual: las ventas se suben solas al volver internet.';
+  } else if (n) {
+    cls = 'sync'; label = 'SINCRONIZANDO · ' + n;
+    setupCls = 'ok'; setupTxt = '● CONECTADO · SINCRONIZANDO ' + n + ' PENDIENTES';
+  } else {
+    cls = 'on'; label = 'EN LÍNEA';
+    setupCls = 'ok'; setupTxt = '● CONECTADO · LAS BARRAS ESTÁN SINCRONIZADAS';
+  }
+  if (pill) { pill.className = 'conn-pill ' + cls; txt.textContent = label; }
+  if (setup) { setup.className = 'firebase-note ' + setupCls; setup.textContent = setupTxt; }
+}
+
+function watchConnection() {
+  if (!window._firebaseReady || watchConnection._done) return;
+  watchConnection._done = true;
+  window._onValue(window._ref(window._db, '.info/connected'), snap => {
+    const was = fbConnected;
+    fbConnected = snap.val() === true;
+    renderConnStatus();
+    if (fbConnected && SESSION.barra) registerBarraPresence();
+    if (was && !fbConnected) showToast('⚠ SIN CONEXIÓN — LAS VENTAS SE GUARDAN EN ESTE EQUIPO', 'red');
+    if (!was && fbConnected && pendingOps.length) showToast('✓ CONEXIÓN RECUPERADA — SUBIENDO VENTAS', 'green');
+  });
+}
+
+function registerBarraPresence() {
+  try {
+    const key = SESSION.barra.replace(/[^a-zA-Z0-9]/g, '_');
+    const r = window._ref(window._db, 'vorynq/barras/' + key);
+    window._onDisconnect(r).update({ online: false, lastSeen: new Date().toISOString() });
+    window._update(r, { name: SESSION.barra, operador: SESSION.operador, online: true, lastSeen: new Date().toISOString() });
+  } catch(e) { console.error(e); }
+}
+
+// Estado inicial (antes de que cargue Firebase)
+document.addEventListener('DOMContentLoaded', renderConnStatus);
+if (window._firebaseReady) watchConnection();
+else document.addEventListener('firebaseReady', watchConnection);
+setTimeout(renderConnStatus, 8000); // si el servidor no cargó en 8 s, mostrarlo
+
+// Copia productos, stock y configuración desde 'underhertz' a 'vorynq' la primera vez.
+// Las ventas y retiros NO se copian: VORYNQ arranca con su propio historial.
+let _migrating = false;
+async function migrateFromOriginal() {
+  if (_migrating || !window._firebaseReady) return;
+  _migrating = true;
+  try {
+    const db = window._db, r = window._ref;
+    const [prodSnap, stockSnap, cfgSnap] = await Promise.all([
+      window._get(r(db, 'underhertz/products')),
+      window._get(r(db, 'underhertz/stock')),
+      window._get(r(db, 'underhertz/config')),
+    ]);
+    const prods = prodSnap.val();
+    if (prods && Object.values(prods).filter(Boolean).length) {
+      const stock = stockSnap.val() || {};
+      Object.values(prods).forEach(p => { if (p && stock[p.id] !== undefined) p.stock = stock[p.id]; });
+      await window._set(r(db, 'vorynq/stock'), stock);
+      await window._set(r(db, 'vorynq/products'), prods);
+      const cfg = cfgSnap.val() || {};
+      const keep = {};
+      ['adminPin', 'operadorPin', 'lowStock'].forEach(k => { if (cfg[k] !== undefined) keep[k] = cfg[k]; });
+      if (Object.keys(keep).length) await window._update(r(db, 'vorynq/config'), keep);
+      showToast('✓ PRODUCTOS COPIADOS A LA BASE VORYNQ', 'green');
+    } else {
+      pushProductsToFirebase();
+      pushStockToFirebase();
+    }
+  } catch(e) {
+    console.error('Migración', e);
+    pushProductsToFirebase();
+    pushStockToFirebase();
+  }
+  _migrating = false;
 }
 
 function pushProductsToFirebase() {
@@ -1061,8 +1274,8 @@ function pushProductsToFirebase() {
     const db = window._db;
     const refFn = window._ref;
     const productsData = {};
-    products.forEach(p => { productsData[p.id] = p; });
-    window._set(refFn(db, 'underhertz/products'), productsData);
+    products.forEach((p, i) => { p.orden = i; productsData[p.id] = p; });
+    window._set(refFn(db, 'vorynq/products'), productsData);
   } catch(e) {}
 }
 
@@ -1071,29 +1284,12 @@ function updateProductInFirebase(product) {
   try {
     const db = window._db;
     const refFn = window._ref;
-    window._set(refFn(db, 'underhertz/products/' + product.id), product);
-  } catch(e) {}
-}
-
-function updateStockInFirebase(productId, newStock) {
-  if (!window._firebaseReady) return;
-  try {
-    const db = window._db;
-    const refFn = window._ref;
-    const upd = {};
-    upd[productId] = newStock;
-    window._update(refFn(db, 'underhertz/stock'), upd);
+    window._set(refFn(db, 'vorynq/products/' + product.id), product);
   } catch(e) {}
 }
 
 function pushSaleToFirebase(sale) {
-  if (!window._firebaseReady) return;
-  try {
-    const db = window._db;
-    const refFn = window._ref;
-    const salesRef = refFn(db, 'underhertz/sales');
-    window._push(salesRef, sale);
-  } catch(e) {}
+  queueWrite({ kind: 'set', path: 'vorynq/sales/' + sale.id, value: sale });
 }
 
 // ═══════════════════════════════════════════════
@@ -1187,7 +1383,7 @@ function initDragAndDrop() {
 }
 
 function saveProducts() {
-  localStorage.setItem('uh_products', JSON.stringify(products));
+  localStorage.setItem('vq_products', JSON.stringify(products));
 }
 
 // ═══════════════════════════════════════════════
@@ -1304,6 +1500,21 @@ function selectOrg(btn, name) {
   renderCart();
 }
 
+// Calcula cuánto stock mueve una lista de items (sign -1 = venta, +1 = devolución)
+function stockDeltasForItems(items, sign) {
+  const deltas = {};
+  const add = (id, q) => { deltas[id] = (deltas[id] || 0) + sign * q; };
+  items.forEach(item => {
+    const p = products.find(x => x.id === item.id);
+    if (p && p.isCombo && p.comboLines && p.comboLines.length) {
+      p.comboLines.forEach(line => add(line.productId, line.qty * item.qty));
+    } else if (p) {
+      add(p.id, item.qty);
+    }
+  });
+  return deltas;
+}
+
 // ═══════════════════════════════════════════════
 // CHECKOUT
 // ═══════════════════════════════════════════════
@@ -1315,48 +1526,38 @@ function processCheckout() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
 
-  // Deduct stock (handles combos)
-  cart.forEach(item => {
-    const p = products.find(x => x.id === item.id);
-    if (!p) return;
-
-    if (p.isCombo && p.comboLines && p.comboLines.length) {
-      // Deduct each component of the combo
-      p.comboLines.forEach(line => {
-        const base = products.find(x => x.id === line.productId);
-        if (base) {
-          base.stock = Math.max(0, base.stock - (line.qty * item.qty));
-          updateStockInFirebase(base.id, base.stock);
-        }
-      });
-    } else {
-      // Normal product
-      p.stock = Math.max(0, p.stock - item.qty);
-      updateStockInFirebase(p.id, p.stock);
-    }
+  // Descontar stock (incluye combos). En Firebase se resta sobre el valor real,
+  // así dos barras vendiendo a la vez nunca se pisan.
+  const deltas = stockDeltasForItems(cart, -1);
+  Object.entries(deltas).forEach(([id, d]) => {
+    const p = products.find(x => x.id === Number(id));
+    if (p) p.stock = Math.max(0, p.stock + d);
   });
+  changeStockInFirebase(deltas);
   saveProducts();
   renderProducts();
+  checkLowStock();
 
   // Log sale
   const sale = {
+    id: newId(),
     time: timeStr,
     barra: SESSION.barra,
     operador: SESSION.operador,
-    items: [...cart],
+    items: cart.map(i => ({ ...i })),
     total,
     paymentMethod: isOrg ? 'organizador' : SESSION.paymentMethod,
     organizer: SESSION.selectedOrg || null,
     timestamp: now.toISOString(),
   };
   salesLog.push(sale);
-  localStorage.setItem('uh_sales', JSON.stringify(salesLog));
+  localStorage.setItem('vq_sales', JSON.stringify(salesLog));
   pushSaleToFirebase(sale);
 
   // Update total (only count real sales)
   if (!isOrg) {
     totalLocal += total;
-    localStorage.setItem('uh_total', totalLocal);
+    localStorage.setItem('vq_total', totalLocal);
     updateTotalDisplay();
   }
 
@@ -1427,7 +1628,7 @@ function printTicket(sale) {
       </div>
       <hr class="ticket-divider">
       <div class="ticket-item">
-        <span>${u.emoji} ${u.name}</span>
+        <span>${u.name}</span>
         <span>${isOrg ? 'GRATIS' : (u.price != null ? '$' + u.price.toLocaleString('es-AR') : '')}</span>
       </div>
       ${u.comboLabel ? `<div class="ticket-meta" style="text-align:center;">(${u.comboLabel})</div>` : ''}
@@ -1446,6 +1647,396 @@ function printTicket(sale) {
   document.getElementById('printArea').innerHTML = ticketsHTML;
 
   setTimeout(() => window.print(), 100);
+}
+
+// ═══════════════════════════════════════════════
+// ALERTA DE STOCK BAJO
+// ═══════════════════════════════════════════════
+let _lowNotified = {};
+function checkLowStock(silent) {
+  const bar = document.getElementById('lowStockBar');
+  if (!bar) return;
+  const th = Number(SESSION.lowStock) || 0;
+  const low = products.filter(p => !p.isCombo && p.stock <= th);
+  if (!low.length) {
+    bar.classList.remove('show'); bar.innerHTML = '';
+  } else {
+    low.sort((a, b) => a.stock - b.stock);
+    bar.innerHTML = '⚠ STOCK BAJO: ' + low.map(p =>
+      p.stock <= 0 ? `<span class="out">${p.name} (AGOTADO)</span>` : `<b>${p.name}</b> (${p.stock})`
+    ).join(' · ');
+    bar.title = bar.textContent;
+    bar.classList.add('show');
+  }
+  // Aviso emergente solo cuando un producto recién entra en stock bajo
+  const nowLow = {};
+  low.forEach(p => { nowLow[p.id] = true; });
+  if (!silent) {
+    const nuevos = low.filter(p => !_lowNotified[p.id]);
+    if (nuevos.length) {
+      const p = nuevos[0];
+      showToast(p.stock <= 0 ? `⚠ ${p.name.toUpperCase()} AGOTADO` : `⚠ STOCK BAJO: ${p.name.toUpperCase()} (${p.stock})`, 'red');
+    }
+  }
+  _lowNotified = nowLow;
+}
+
+// ═══════════════════════════════════════════════
+// VENTAS DE ESTA BARRA / ANULACIÓN
+// ═══════════════════════════════════════════════
+function renderVentasPanel(el) {
+  const mine = salesLog.filter(s => s.barra === SESSION.barra).slice().reverse();
+  const fmt = n => '$' + (n || 0).toLocaleString('es-AR');
+  const rows = mine.map(s => {
+    const items = (s.items || []).map(i => `${i.name} x${i.qty}`).join(', ');
+    const pago = s.organizer ? 'ORG: ' + s.organizer : (s.paymentMethod || '').toUpperCase();
+    let right;
+    if (s.anulada) right = `<div style="text-align:right;"><div class="sale-amt">${s.organizer ? 'ORG' : fmt(s.total)}</div><div class="sale-tag">ANULADA ${s.anuladaTime || ''}</div></div>`;
+    else if (!s.id) right = `<div class="sale-amt">${s.organizer ? 'ORG' : fmt(s.total)}</div>`;
+    else right = `<div style="display:flex;align-items:center;gap:8px;"><div class="sale-amt">${s.organizer ? 'ORG' : fmt(s.total)}</div><button class="annul-btn" onclick="askAnnulSale('${s.id}')">↩ ANULAR</button></div>`;
+    return `<div class="sale-row ${s.anulada ? 'anulada' : ''}">
+      <div class="sale-info"><div class="sale-top">${s.time || ''} · ${pago} · ${s.operador || ''}</div><div class="sale-items">${items}</div></div>
+      ${right}
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">🧾 VENTAS · ${SESSION.barra}</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">${mine.length} ventas en esta barra · anular requiere PIN de admin</div>
+        ${rows || '<p style="color:var(--gray);font-family:DM Mono,monospace;font-size:11px;">Sin ventas todavía.</p>'}
+      </div>
+      <button class="panel-btn secondary" onclick="closePanel()">CERRAR</button>
+    </div>`;
+}
+
+function askAnnulSale(id) {
+  const s = salesLog.find(x => x.id === id);
+  if (!s || s.anulada) return;
+  const desc = (s.items || []).map(i => `${i.name} x${i.qty}`).join(', ');
+  const monto = s.organizer ? 'consumo organizador' : '$' + (s.total || 0).toLocaleString('es-AR');
+  if (!confirm(`¿Anular esta venta?\n\n${s.time} · ${desc}\n${monto}\n\nSe devuelve el stock y se descuenta del total.`)) return;
+  requirePin('admin', () => {
+    annulSale(id);
+    document.getElementById('panelOverlay').classList.add('open');
+    renderVentasPanel(document.getElementById('panelContent'));
+  });
+}
+
+function annulSale(id) {
+  const s = salesLog.find(x => x.id === id);
+  if (!s || s.anulada) return;
+  const now = new Date();
+  s.anulada = true;
+  s.anuladaAt = now.toISOString();
+  s.anuladaTime = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  s.anuladaPor = SESSION.operador;
+  localStorage.setItem('vq_sales', JSON.stringify(salesLog));
+
+  // Devolver stock
+  const deltas = stockDeltasForItems(s.items || [], +1);
+  Object.entries(deltas).forEach(([pid, d]) => {
+    const p = products.find(x => x.id === Number(pid));
+    if (p) p.stock += d;
+  });
+  changeStockInFirebase(deltas);
+  saveProducts();
+  renderProducts();
+  checkLowStock(true);
+
+  // Descontar del total de la barra
+  if (!s.organizer) {
+    totalLocal = Math.max(0, totalLocal - (s.total || 0));
+    localStorage.setItem('vq_total', totalLocal);
+    updateTotalDisplay();
+  }
+
+  // Marcar en Firebase
+  queueWrite({ kind: 'update', path: 'vorynq/sales/' + id,
+    value: { anulada: true, anuladaAt: s.anuladaAt, anuladaTime: s.anuladaTime, anuladaPor: s.anuladaPor } });
+  showToast('✓ VENTA ANULADA — STOCK DEVUELTO', 'green');
+}
+
+// ═══════════════════════════════════════════════
+// CARGA MASIVA DE LA CARTA DESDE EXCEL
+// ═══════════════════════════════════════════════
+let _cartaPreview = null;   // filas leídas del archivo, pendientes de confirmar
+
+function loadSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error('XLSX no disponible'));
+    sc.onerror = () => rej(new Error('No se pudo cargar el lector de Excel. Revisá la conexión a internet.'));
+    document.head.appendChild(sc);
+  });
+}
+
+const normTxt = t => String(t ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Emoji sugerido según el nombre (si el Excel no trae uno)
+function guessEmoji(name) {
+  const n = normTxt(name);
+  const map = [
+    [/cerve|birra|heineken|quilmes|stella|corona|brahma|budweiser|imperial|patagonia|ipa|lata/, '🍺'],
+    [/fernet|whisk|ron\b|ron |branca|jager|licor|aperitivo|campari|gancia|cynar/, '🥃'],
+    [/vino|malbec|tinto|blanco|rosado/, '🍷'],
+    [/champ|espumante|chandon|prosecco/, '🍾'],
+    [/gin|vodka|trago|daiquiri|mojito|caipi|cocktail|coctel|negroni|spritz|tequila|margarita/, '🍸'],
+    [/shot|chupito/, '🔥'],
+    [/agua/, '💧'],
+    [/energ|red ?bull|speed|monster/, '⚡'],
+    [/coca|gaseosa|sprite|fanta|pepsi|7 ?up|tonica|soda|pomelo|jugo|limonada/, '🥤'],
+    [/hielo/, '🧊'],
+    [/vaso/, '🥛'],
+    [/cafe/, '☕'],
+    [/pancho|hamburg|pizza|papas|snack|comida|empanada|sandw/, '🍔'],
+    [/combo|promo|balde|botella/, '🎉'],
+  ];
+  for (const [re, e] of map) if (re.test(n)) return e;
+  return '📦';
+}
+
+// Convierte "$2.500", "2500", "2.500,50" o un número de Excel a pesos enteros
+function parsePrice(v) {
+  if (typeof v === 'number') return Math.round(v);
+  let t = String(v ?? '').replace(/[$\s]/g, '');
+  if (!t) return NaN;
+  if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');   // 2.500,50
+  else t = t.replace(/[.,](?=\d{3}(\D|$))/g, '');                       // 2.500 / 2,500
+  const n = parseFloat(t);
+  return isNaN(n) ? NaN : Math.round(n);
+}
+function parseStock(v) {
+  if (v === undefined || v === null || String(v).trim() === '') return null;
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'));
+  return isNaN(n) ? NaN : Math.max(0, Math.round(n));
+}
+
+async function downloadCartaTemplate() {
+  try {
+    const XLSX = await loadSheetJS();
+    const base = products.filter(p => !p.isCombo);
+    const rows = [['Producto', 'Precio', 'Stock', 'Emoji (opcional)']];
+    if (base.length) base.forEach(p => rows.push([p.name, p.price, p.stock, p.emoji]));
+    else rows.push(['Cerveza lata', 3000, 120, '🍺'], ['Fernet con coca', 5000, 80, '🥃'], ['Agua', 1500, 100, '💧']);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Carta');
+    XLSX.writeFile(wb, 'carta-vorynq.xlsx');
+    showToast('✓ PLANTILLA DESCARGADA', 'green');
+  } catch (e) {
+    showToast('⚠ ' + e.message.toUpperCase(), 'red');
+  }
+}
+
+async function readCartaFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const XLSX = await loadSheetJS();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const grid = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+
+    // Buscar la fila de encabezados en las primeras 10 filas
+    let hRow = -1, col = {};
+    for (let r = 0; r < Math.min(grid.length, 10) && hRow < 0; r++) {
+      const c = {};
+      grid[r].forEach((h, i) => {
+        const n = normTxt(h);
+        if (c.name === undefined && /^(producto|productos|nombre|item|articulo|bebida|descripcion)/.test(n)) c.name = i;
+        else if (c.price === undefined && /^(precio|valor|importe|\$)/.test(n)) c.price = i;
+        else if (c.stock === undefined && /^(stock|cantidad|unidades|cant)/.test(n)) c.stock = i;
+        else if (c.emoji === undefined && /^(emoji|icono)/.test(n)) c.emoji = i;
+      });
+      if (c.name !== undefined && c.price !== undefined) { hRow = r; col = c; }
+    }
+    // Sin encabezados: se asume A = producto, B = precio, C = stock
+    if (hRow < 0) { hRow = -1; col = { name: 0, price: 1, stock: 2 }; }
+
+    const rows = [];
+    const seen = {};
+    for (let r = hRow + 1; r < grid.length; r++) {
+      const line = grid[r];
+      const name = String(line[col.name] ?? '').trim();
+      const rawPrice = line[col.price];
+      if (!name && (rawPrice === '' || rawPrice === undefined)) continue; // fila vacía
+      const price = parsePrice(rawPrice);
+      const stock = col.stock !== undefined ? parseStock(line[col.stock]) : null;
+      const emoji = col.emoji !== undefined ? String(line[col.emoji] ?? '').trim() : '';
+      let error = '';
+      if (!name) error = 'Falta el nombre';
+      else if (isNaN(price) || price <= 0) error = 'Precio inválido';
+      else if (Number.isNaN(stock)) error = 'Stock inválido';
+      const key = normTxt(name);
+      if (!error && seen[key] !== undefined) rows[seen[key]].error = 'Repetido (se usa la última fila)';
+      if (!error) seen[key] = rows.length;
+      rows.push({ fila: r + 1, name, price, stock, emoji, error });
+    }
+    if (!rows.length) { showToast('⚠ EL ARCHIVO NO TIENE PRODUCTOS', 'red'); return; }
+    _cartaPreview = { file: file.name, rows, mode: 'merge' };
+    renderCartaPreview();
+  } catch (e) {
+    console.error(e);
+    showToast('⚠ NO SE PUDO LEER EL ARCHIVO: ' + e.message.toUpperCase(), 'red');
+  }
+}
+
+// Calcula qué va a pasar con cada producto según el modo elegido
+function planCarta(mode) {
+  const valid = _cartaPreview.rows.filter(r => !r.error);
+  const byName = {};
+  products.forEach(p => { byName[normTxt(p.name)] = p; });
+  const plan = valid.map(r => {
+    const ex = byName[normTxt(r.name)];
+    if (!ex) return { ...r, status: 'nuevo' };
+    const changes = [];
+    if (ex.price !== r.price) changes.push(`precio $${ex.price.toLocaleString('es-AR')} → $${r.price.toLocaleString('es-AR')}`);
+    if (r.stock !== null && !ex.isCombo && ex.stock !== r.stock) changes.push(`stock ${ex.stock} → ${r.stock}`);
+    if (r.emoji && r.emoji !== ex.emoji) changes.push('emoji');
+    return { ...r, status: changes.length ? 'cambia' : 'igual', changes, existing: ex };
+  });
+  const inFile = new Set(valid.map(r => normTxt(r.name)));
+  const removed = mode === 'replace' ? products.filter(p => !inFile.has(normTxt(p.name))) : [];
+  return { plan, removed };
+}
+
+function setCartaMode(mode) {
+  if (!_cartaPreview) return;
+  _cartaPreview.mode = mode;
+  renderCartaPreview();
+}
+
+function renderCartaPreview() {
+  const el = document.getElementById('panelContent');
+  const P = _cartaPreview;
+  const { plan, removed } = planCarta(P.mode);
+  const errors = P.rows.filter(r => r.error);
+  const cnt = s => plan.filter(x => x.status === s).length;
+  const sinStock = plan.filter(x => x.status === 'nuevo' && !x.stock).length;
+  const badge = (txt, color) => `<span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:${color};">${txt}</span>`;
+  const rowsHTML = plan.map(x => {
+    let st;
+    if (x.status === 'nuevo') st = badge('NUEVO' + (!x.stock ? ' · SIN STOCK' : ''), x.stock ? 'var(--green)' : 'var(--orange)');
+    else if (x.status === 'cambia') st = badge(x.changes.join(' · ').toUpperCase(), 'var(--cyan)');
+    else st = badge('SIN CAMBIOS', 'var(--gray-light)');
+    const emoji = x.emoji || (x.existing ? x.existing.emoji : guessEmoji(x.name));
+    const stock = x.stock !== null ? x.stock : (x.existing ? x.existing.stock : 0);
+    return `<tr><td>${emoji} ${x.name}</td><td>$${x.price.toLocaleString('es-AR')}</td><td>${x.existing && x.existing.isCombo ? '—' : stock}</td><td>${st}</td></tr>`;
+  }).join('');
+  const errHTML = errors.map(r => `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-bottom:4px;">Fila ${r.fila}: ${r.name || '(sin nombre)'} — ${r.error}</div>`).join('');
+  const remHTML = removed.map(p => `${p.emoji} ${p.name}`).join(' · ');
+  const modeBtn = (m, label, desc) => `
+    <div onclick="setCartaMode('${m}')" style="cursor:pointer;flex:1;min-width:200px;padding:12px;border:1px solid ${P.mode === m ? 'var(--blue)' : 'var(--border)'};background:${P.mode === m ? 'rgba(0,85,255,0.12)' : 'var(--black)'};">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;margin-bottom:4px;">${P.mode === m ? '◉' : '○'} ${label}</div>
+      <div style="font-size:11px;color:var(--gray-light);">${desc}</div>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="panel-header">
+      <span class="panel-title">📤 CARGAR CARTA</span>
+      <button class="panel-close" onclick="cancelCarta()">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Archivo: ${P.file}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          ${modeBtn('merge', 'ACTUALIZAR Y AGREGAR', 'Cambia precios de los que ya existen y suma los nuevos. No borra nada.')}
+          ${modeBtn('replace', 'REEMPLAZAR TODA LA CARTA', 'La carta queda exactamente como el Excel. Se borran los productos que no están.')}
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);margin-bottom:10px;">
+          ${cnt('nuevo')} nuevos · ${cnt('cambia')} con cambios · ${cnt('igual')} sin cambios${removed.length ? ` · <span style="color:var(--red)">${removed.length} se eliminan</span>` : ''}${errors.length ? ` · <span style="color:var(--red)">${errors.length} con error (se ignoran)</span>` : ''}
+        </div>
+        ${sinStock ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);margin-bottom:10px;">⚠ ${sinStock} productos nuevos no tienen stock: no se van a poder vender hasta cargarlo en 📦 Stock.</div>` : ''}
+        ${removed.length ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-bottom:10px;">Se eliminan: ${remHTML}</div>` : ''}
+        ${errHTML}
+        <table class="stock-table">
+          <thead><tr><th>Producto</th><th>Precio</th><th>Stock</th><th>Qué pasa</th></tr></thead>
+          <tbody>${rowsHTML || '<tr><td colspan="4">Ningún producto válido.</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="panel-btn green" onclick="applyCarta()" ${plan.length ? '' : 'disabled'}>✓ CONFIRMAR Y APLICAR EN TODAS LAS BARRAS</button>
+        <button class="panel-btn secondary" onclick="cancelCarta()">CANCELAR</button>
+      </div>
+    </div>`;
+}
+
+function cancelCarta() {
+  _cartaPreview = null;
+  renderAdminPanel(document.getElementById('panelContent'));
+}
+
+function applyCarta() {
+  if (!_cartaPreview) return;
+  const mode = _cartaPreview.mode;
+  const { plan, removed } = planCarta(mode);
+  if (removed.length && !confirm(`Se van a eliminar ${removed.length} productos que no están en el Excel.\n\n¿Continuar?`)) return;
+
+  const removedIds = new Set(removed.map(p => p.id));
+  let next = products.filter(p => !removedIds.has(p.id));
+  // Combos que usan un producto eliminado también se quitan
+  next = next.filter(p => !(p.isCombo && (p.comboLines || []).some(l => removedIds.has(l.productId))));
+
+  const stockChanged = [];
+  let idBase = Date.now();
+  plan.forEach((x, i) => {
+    if (x.existing) {
+      const p = next.find(q => q.id === x.existing.id);
+      if (!p) return;
+      p.price = x.price;
+      p.name = x.name;
+      if (x.emoji) p.emoji = x.emoji;
+      if (x.stock !== null && !p.isCombo && p.stock !== x.stock) {
+        p.stock = x.stock; p.initialStock = x.stock; stockChanged.push(p.id);
+      }
+    } else {
+      const st = x.stock !== null ? x.stock : 0;
+      next.push({ id: idBase + i, name: x.name, emoji: x.emoji || guessEmoji(x.name), price: x.price,
+        stock: st, initialStock: st, isCombo: false, comboLines: [] });
+      stockChanged.push(idBase + i);
+    }
+  });
+
+  // En "reemplazar", el orden de la carta queda igual al del Excel
+  if (mode === 'replace') {
+    const order = plan.map(x => normTxt(x.name));
+    next.sort((a, b) => {
+      const ia = order.indexOf(normTxt(a.name)), ib = order.indexOf(normTxt(b.name));
+      return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+    });
+  }
+
+  products = next;
+  saveProducts();
+
+  // Sincronizar con todas las barras (queda en cola si no hay internet)
+  const productsData = {};
+  products.forEach((p, i) => { p.orden = i; productsData[p.id] = p; });
+  saveProducts();
+  queueWrite({ kind: 'set', path: 'vorynq/products', value: productsData });
+  if (mode === 'replace') {
+    const stockData = {};
+    products.forEach(p => { stockData[p.id] = p.stock; });
+    queueWrite({ kind: 'set', path: 'vorynq/stock', value: stockData });
+  } else {
+    pushStockToFirebase(stockChanged);
+  }
+
+  renderProducts();
+  checkLowStock(true);
+  const n = plan.length;
+  _cartaPreview = null;
+  renderAdminPanel(document.getElementById('panelContent'));
+  showToast(`✓ CARTA CARGADA: ${n} PRODUCTOS${removed.length ? ' · ' + removed.length + ' ELIMINADOS' : ''}`, 'green');
 }
 
 // ═══════════════════════════════════════════════
@@ -1469,7 +2060,8 @@ function openPanel(name) {
   const content = document.getElementById('panelContent');
   overlay.classList.add('open');
 
-  if (name === 'stock') renderStockPanel(content);
+  if (name === 'ventas') renderVentasPanel(content);
+  else if (name === 'stock') renderStockPanel(content);
   else if (name === 'cierre') renderCierrePanel(content);
   else if (name === 'retiro') renderRetiroPanel(content);
 }
@@ -1526,14 +2118,20 @@ function renderStockPanel(el) {
   `;
 }
 
+let editedStockIds = [];
 function updateStock(productId, val) {
   const p = products.find(x => x.id === productId);
-  if (p) p.stock = Math.max(0, parseInt(val) || 0);
+  if (p) {
+    p.stock = Math.max(0, parseInt(val) || 0);
+    if (!editedStockIds.includes(productId)) editedStockIds.push(productId);
+  }
 }
 
 function saveStockFromPanel() {
   saveProducts();
-  pushStockToFirebase();
+  pushStockToFirebase(editedStockIds);
+  editedStockIds = [];
+  checkLowStock();
   renderProducts();
   showToast('✓ STOCK GUARDADO', 'green');
   closePanel();
@@ -1587,7 +2185,9 @@ function registrarRetiro() {
 
   const now = new Date();
   const entry = {
+    id: newId(),
     barra: SESSION.barra,
+    operador: SESSION.operador,
     nombre,
     monto,
     nota,
@@ -1595,16 +2195,10 @@ function registrarRetiro() {
     timestamp: now.toISOString(),
   };
   retiroLog.push(entry);
-  localStorage.setItem('uh_retiros', JSON.stringify(retiroLog));
+  localStorage.setItem('vq_retiros', JSON.stringify(retiroLog));
 
-  // Push to Firebase
-  if (window._firebaseReady) {
-    try {
-      const db = window._db;
-      const refFn = window._ref;
-      window._push(refFn(db, 'underhertz/retiros'), entry);
-    } catch(e) {}
-  }
+  // Subir a Firebase (queda en cola si no hay internet)
+  queueWrite({ kind: 'set', path: 'vorynq/retiros/' + entry.id, value: entry });
 
   showToast(`✓ RETIRO $${monto.toLocaleString('es-AR')} REGISTRADO`, 'green');
   renderRetiroPanel(document.getElementById('panelContent'));
@@ -1644,6 +2238,7 @@ function renderCierrePanel(el) {
   let totalGeneral = 0;
 
   salesLog.forEach(s => {
+    if (s.anulada) return;
     if (s.organizer) { orgCount++; return; }
     const method = s.paymentMethod || 'efectivo';
     if (method === 'tarjeta' || method === 'mercadopago') {
@@ -1715,6 +2310,7 @@ function renderResumenPanel(el) {
   const barrasTotals = {};
   const barrasSales = {};
   salesLog.forEach(s => {
+    if (s.anulada) return;
     if (!s.organizer) {
       barrasTotals[s.barra] = (barrasTotals[s.barra] || 0) + s.total;
     }
@@ -1725,6 +2321,7 @@ function renderResumenPanel(el) {
   // Product summary
   const productSold = {};
   salesLog.forEach(s => {
+    if (s.anulada) return;
     s.items.forEach(i => {
       productSold[i.name] = (productSold[i.name] || 0) + i.qty;
     });
@@ -1807,14 +2404,16 @@ function renderResumenPanel(el) {
 function resetNight() {
   if (!confirm('¿Resetear todos los datos de esta noche? Esto borrará ventas, retiros y totales en todas las barras.')) return;
   salesLog = []; retiroLog = []; totalLocal = 0;
-  localStorage.setItem('uh_sales', '[]');
-  localStorage.setItem('uh_retiros', '[]');
-  localStorage.setItem('uh_total', '0');
+  pendingOps = pendingOps.filter(o => !/^vorynq\/(sales|retiros)\//.test(o.path)); savePending();
+  localStorage.setItem('vq_sales', '[]');
+  localStorage.setItem('vq_retiros', '[]');
+  localStorage.setItem('vq_total', '0');
   // Reset stock to initial
   products.forEach(p => { p.stock = p.initialStock; });
   saveProducts();
   pushStockToFirebase();
   updateTotalDisplay();
+  checkLowStock(true);
   renderProducts();
 
   // Clear Firebase completely
@@ -1823,11 +2422,11 @@ function resetNight() {
       const db = window._db;
       const refFn = window._ref;
       // Clear sales
-      window._set(refFn(db, 'underhertz/sales'), null);
+      window._set(refFn(db, 'vorynq/sales'), null);
       // Clear retiros
-      window._set(refFn(db, 'underhertz/retiros'), null);
+      window._set(refFn(db, 'vorynq/retiros'), null);
       // Clear barras list
-      window._set(refFn(db, 'underhertz/barras'), null);
+      window._set(refFn(db, 'vorynq/barras'), null);
       showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS', 'green');
     } catch(e) {
       showToast('✓ NOCHE RESETEADA LOCAL', 'green');
@@ -1866,8 +2465,25 @@ function renderAdminPanel(el) {
             <label class="pf-label">Organizadores (separados por coma)</label>
             <input class="event-config-input" id="cfgOrgs" value="${SESSION.organizers.join(', ')}">
           </div>
+          <div>
+            <label class="pf-label">Alerta de stock bajo (unidades, todas las barras)</label>
+            <input class="event-config-input" id="cfgLowStock" type="number" min="0" value="${SESSION.lowStock}">
+          </div>
         </div>
         <button class="panel-btn green" onclick="saveEventConfig()">GUARDAR CONFIGURACIÓN</button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Carga masiva de la carta (Excel)</div>
+        <div style="font-size:12px;color:var(--gray-light);margin-bottom:12px;line-height:1.5;">
+          Columnas: <b>Producto</b>, <b>Precio</b>, Stock y Emoji (opcionales). Antes de aplicar se muestra una vista previa.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="panel-btn secondary" onclick="downloadCartaTemplate()">⬇ DESCARGAR PLANTILLA / CARTA ACTUAL</button>
+          <label class="panel-btn" style="display:inline-block;cursor:pointer;">📤 SUBIR EXCEL
+            <input type="file" accept=".xlsx,.xls,.csv,.ods" style="display:none;" onchange="readCartaFile(this)">
+          </label>
+        </div>
       </div>
 
       <div class="panel-section">
@@ -2021,12 +2637,21 @@ function saveEventConfig() {
   SESSION.eventLocation = document.getElementById('cfgLocation').value.trim();
   SESSION.organizers = document.getElementById('cfgOrgs').value.split(',').map(s => s.trim()).filter(Boolean);
 
-  localStorage.setItem('uh_eventConfig', JSON.stringify({
+  localStorage.setItem('vq_eventConfig', JSON.stringify({
     eventName: SESSION.eventName,
     eventDate: SESSION.eventDate,
     eventLocation: SESSION.eventLocation,
     organizers: SESSION.organizers,
+    lowStock: SESSION.lowStock,
   }));
+
+  // Umbral de stock bajo: se comparte con todas las barras
+  const ls = parseInt(document.getElementById('cfgLowStock').value);
+  if (!isNaN(ls) && ls >= 0) {
+    SESSION.lowStock = ls;
+    queueWrite({ kind: 'update', path: 'vorynq/config', value: { lowStock: ls } });
+    checkLowStock(true);
+  }
 
   document.getElementById('topEventName').textContent =
     SESSION.eventName + (SESSION.eventDate ? ' · ' + SESSION.eventDate : '');
@@ -2150,18 +2775,12 @@ function changePins() {
   }
 
   // Save to localStorage
-  localStorage.setItem('uh_pins', JSON.stringify(PINS));
+  localStorage.setItem('vq_pins', JSON.stringify(PINS));
 
-  // Push admin PIN to Firebase so dashboard can read it
-  if (window._firebaseReady && adminPin && adminPin.length === 4) {
-    try {
-      const db = window._db;
-      const refFn = window._ref;
-      window._update(refFn(db, 'underhertz/config'), { adminPin: PINS.admin });
-    } catch(e) {}
-  }
+  // Compartir los PINs con todas las barras y el panel (queda en cola si no hay internet)
+  queueWrite({ kind: 'update', path: 'vorynq/config', value: { adminPin: PINS.admin, operadorPin: PINS.operador } });
 
-  showToast('✓ PINs ACTUALIZADOS', 'green');
+  showToast('✓ PINs ACTUALIZADOS EN TODAS LAS BARRAS Y EL PANEL', 'green');
 }
 
 function toggleEditProduct(id) {

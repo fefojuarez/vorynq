@@ -64,7 +64,7 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
 .methods-row{display:flex;flex-wrap:wrap;gap:4px;}
 .method-tag{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--cyan);background:rgba(0,221,255,0.08);border:1px solid rgba(0,221,255,0.15);padding:2px 7px;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.feed-list,.retiros-box{background:var(--surface);border:1px solid var(--border);max-height:360px;overflow-y:auto;}
+.feed-list,.retiros-box{background:var(--surface);border:1px solid var(--border);max-height:520px;overflow-y:auto;}
 .feed-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);}
 .feed-item:last-child{border-bottom:none;}
 .feed-item.org{background:rgba(255,136,0,0.04);}
@@ -102,7 +102,31 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
 .del-btn{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:var(--red);padding:8px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
 .del-btn:hover{background:var(--red);color:white;}
 .reset-btn{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:var(--red);padding:10px 20px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;margin-top:10px;display:inline-block;}
+.export-btn{background:rgba(0,85,255,0.12);border:1px solid rgba(0,85,255,0.45);color:var(--white);padding:10px 16px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;margin-top:10px;width:100%;}
+.export-btn:hover{background:var(--blue);}
 .reset-btn:hover{background:var(--red);color:white;}
+.live-badge.off{color:var(--red);}
+.live-badge.off .live-dot{background:var(--red);}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.filters select{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);color:var(--white);padding:8px 10px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;}
+.filter-sum{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray-light);margin-bottom:8px;}
+.feed-item.anulada{opacity:0.5;}
+.feed-item.anulada .feed-amount{text-decoration:line-through;color:var(--gray-light);}
+.anul-tag{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--red);}
+.rank-box{background:var(--surface);border:1px solid var(--border);}
+.rank-row{display:grid;grid-template-columns:28px 1fr 70px 50px 100px;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);}
+.rank-row:last-child{border-bottom:none;}
+.rank-row.head{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;}
+.rank-pos{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--blue-light);}
+.rank-name{font-weight:700;font-size:13px;min-width:0;}
+.rank-track{height:3px;background:rgba(255,255,255,0.06);margin-top:5px;}
+.rank-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));}
+.rank-num{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;text-align:right;}
+.rank-org{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);text-align:right;}
+.rank-money{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--green);text-align:right;}
+.online-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.online-dot.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+.online-dot.off{background:var(--red);}
 .no-data{padding:20px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--gray);letter-spacing:2px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;z-index:9999;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;background:var(--blue);color:white;}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -132,27 +156,39 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
 
 <div id="dashboard">
   <div class="top-bar">
-    <div class="top-logo">UNDER<span>HERTZ</span></div>
-    <div class="live-badge"><div class="live-dot"></div>EN VIVO</div>
+    <div class="top-logo">VORY<span>NQ</span></div>
+    <div class="live-badge" id="liveBadge"><div class="live-dot"></div><span id="liveText">CONECTANDO</span></div>
     <div class="top-time" id="lastUpdate">Conectando...</div>
   </div>
   <div class="body">
     <div class="hero-stats">
       <div class="hstat main"><div class="hstat-label">Total recaudado</div><div class="hstat-val g" id="grandTotal">$0</div><div class="hstat-sub">todas las barras</div></div>
-      <div class="hstat g"><div class="hstat-label">Ventas</div><div class="hstat-val g" id="totalVentas">0</div><div class="hstat-sub">transacciones</div></div>
+      <div class="hstat g"><div class="hstat-label">Ventas</div><div class="hstat-val g" id="totalVentas">0</div><div class="hstat-sub" id="ventasSub">transacciones</div></div>
       <div class="hstat o"><div class="hstat-label">Retiros</div><div class="hstat-val o" id="totalRetiros">$0</div><div class="hstat-sub">del efectivo</div></div>
       <div class="hstat c"><div class="hstat-label">Consumos org.</div><div class="hstat-val c" id="totalOrg">0</div><div class="hstat-sub">sin cargo</div></div>
     </div>
     <div class="section"><div class="sec-title">💰 Recaudación por barra</div><div class="barras-grid" id="barrasGrid"><div class="no-data">Esperando datos...</div></div></div>
     <div class="two-col">
-      <div class="section"><div class="sec-title">🧾 Últimas ventas</div><div class="feed-list" id="salesFeed"><div class="no-data">Sin ventas aún</div></div></div>
+      <div class="section"><div class="sec-title">🧾 Ventas <span id="salesCount" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);"></span></div>
+        <div class="filters">
+          <select id="fBarra"><option value="">Todas las barras</option></select>
+          <select id="fPago"><option value="">Todos los pagos</option><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="tarjeta">Tarjeta</option><option value="organizador">Organizador</option></select>
+          <select id="fEstado"><option value="">Todas</option><option value="ok">Solo válidas</option><option value="anulada">Solo anuladas</option></select>
+        </div>
+        <div class="filter-sum" id="filterSum"></div>
+        <div class="feed-list" id="salesFeed"><div class="no-data">Sin ventas aún</div></div>
+        <button class="export-btn" id="exportSalesBtn">⬇ EXPORTAR EXCEL (VENTAS · RETIROS · CIERRE · PRODUCTOS)</button>
+      </div>
       <div class="section"><div class="sec-title">💸 Retiros de caja</div><div class="retiros-box" id="retirosList"><div class="no-data">Sin retiros</div></div></div>
     </div>
+    <div class="section"><div class="sec-title">🏆 Productos más vendidos</div><div class="rank-box" id="rankBox"><div class="no-data">Sin ventas aún</div></div></div>
     <div class="section"><div class="sec-title">📦 Stock en tiempo real</div><div class="stock-grid" id="stockGrid"><div class="no-data">Cargando...</div></div></div>
     <div class="section">
       <div class="sec-title">🖥 Gestión de barras</div>
       <div id="barrasMgmt"><div class="no-data">Cargando...</div></div>
+      <button class="export-btn" id="backupBtn" style="width:auto;margin-right:6px;">💾 DESCARGAR COPIA DE SEGURIDAD</button>
       <button class="reset-btn" id="resetBtn">🔄 RESETEAR NOCHE COMPLETA</button>
+      <button class="reset-btn" id="zeroStockBtn">📦 PONER STOCK EN CERO</button>
     </div>
   </div>
 </div>
@@ -166,8 +202,10 @@ function pk(n){if(buf.length>=4)return;buf+=n;upd();if(buf.length===4)setTimeout
 function pd(){buf=buf.slice(0,-1);upd();document.getElementById('pinErr').textContent='';}
 function upd(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<buf.length);}
 function pc(){
-  const saved=JSON.parse(localStorage.getItem('uh_pins')||'{}');
-  const adminPin=saved.admin||'0000';
+  // PIN de admin compartido desde Firebase; si todavía no cargó, el guardado en este equipo
+  let saved={};
+  try{saved=JSON.parse(localStorage.getItem('vq_pins')||'{}')||{};}catch(e){}
+  const adminPin=window._remoteAdminPin||saved.admin||'0000';
   if(buf===adminPin){
     document.getElementById('pinScreen').style.display='none';
     document.getElementById('dashboard').style.display='block';
@@ -193,106 +231,192 @@ function showToast(msg,type=''){
 <!-- Firebase module script - ALL firebase logic here -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, onValue, remove, set }
+import { getDatabase, ref, onValue, remove, set, update, get }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhVEKeqhvVMrqShoRVSy2f0eb8W_c9hj4",
-  authDomain: "barra-underhertz.firebaseapp.com",
-  databaseURL: "https://barra-underhertz-default-rtdb.firebaseio.com",
-  projectId: "barra-underhertz",
-  storageBucket: "barra-underhertz.firebasestorage.app",
-  messagingSenderId: "716266397341",
-  appId: "1:716266397341:web:c9d3b9b5a1ba45937e3e74"
+  apiKey: "AIzaSyAk9o3DwTQ0b7CZa555DIEHbTY5Ype8yGI",
+  authDomain: "vorynq-79e90.firebaseapp.com",
+  databaseURL: "https://vorynq-79e90-default-rtdb.firebaseio.com",
+  projectId: "vorynq-79e90",
+  storageBucket: "vorynq-79e90.firebasestorage.app",
+  messagingSenderId: "814265036566",
+  appId: "1:814265036566:web:d8c34080d3954ccbec6a37"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const fmt = n => '$'+(n||0).toLocaleString('es-AR');
+const PAGOS = { efectivo:'Efectivo', mercadopago:'Mercado Pago', tarjeta:'Tarjeta', organizador:'Organizador' };
+const pagoKey = s => s.organizer ? 'organizador' : (s.paymentMethod || 'efectivo');
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ST = { sales: [], retiros: [], products: {}, stock: {}, barras: {} };
 
-// ── SALES ──
-onValue(ref(db,'underhertz/sales'), snap => {
-  const sales = Object.values(snap.val()||{});
-  const barras = {};
-  sales.forEach(s => {
-    if(!s.organizer){
-      if(!barras[s.barra])barras[s.barra]={total:0,count:0,byMethod:{}};
-      barras[s.barra].total+=s.total||0;
-      barras[s.barra].count++;
-      const m=s.paymentMethod||'efectivo';
-      barras[s.barra].byMethod[m]=(barras[s.barra].byMethod[m]||0)+(s.total||0);
-    }
-  });
-  const grandTotal=Object.values(barras).reduce((a,b)=>a+b.total,0);
-  document.getElementById('grandTotal').textContent=fmt(grandTotal);
-  document.getElementById('totalVentas').textContent=sales.filter(s=>!s.organizer).length;
-  document.getElementById('totalOrg').textContent=sales.filter(s=>s.organizer).length;
-
-  const el=document.getElementById('barrasGrid');
-  if(!Object.keys(barras).length){el.innerHTML='<div class="no-data">Sin ventas registradas aún</div>';}
-  else{
-    el.innerHTML=Object.entries(barras).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>{
-      const pct=grandTotal>0?Math.round(d.total/grandTotal*100):0;
-      const methods=Object.entries(d.byMethod).map(([m,v])=>`<span class="method-tag">${m}: ${fmt(v)}</span>`).join('');
-      return `<div class="barra-card"><div class="barra-card-top"><div class="barra-name">${name}</div><div class="barra-pct">${pct}%</div></div><div class="barra-total">${fmt(d.total)}</div><div class="barra-bar-track"><div class="barra-bar-fill" style="width:${pct}%"></div></div><div class="barra-meta">${d.count} ventas</div><div class="methods-row">${methods}</div></div>`;
-    }).join('');
-  }
-
-  const feed=document.getElementById('salesFeed');
-  const recent=[...sales].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp)).slice(0,25);
-  if(!recent.length){feed.innerHTML='<div class="no-data">Sin ventas aún</div>';}
-  else{
-    feed.innerHTML=recent.map(s=>{
-      const items=(s.items||[]).map(i=>`${i.emoji||''} ${i.name} x${i.qty}`).join(', ');
-      const isOrg=!!s.organizer;
-      return `<div class="feed-item ${isOrg?'org':''}"><div><div class="feed-barra">${s.barra||'—'}</div><div class="feed-items">${items}</div></div><div class="feed-right"><div class="feed-amount ${isOrg?'org-amount':''}">${isOrg?'ORG':fmt(s.total)}</div><div class="feed-time">${s.time||''} · ${s.paymentMethod||''}</div></div></div>`;
-    }).join('');
-  }
+function touch(){
   document.getElementById('lastUpdate').textContent='Actualizado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ── PIN COMPARTIDO ──
+onValue(ref(db,'vorynq/config/adminPin'), snap=>{
+  const v=snap.val();
+  if(/^\d{4}$/.test(v||'')) window._remoteAdminPin=v;
 });
+
+// ── CONEXIÓN ──
+onValue(ref(db,'.info/connected'), snap=>{
+  const on = snap.val()===true;
+  document.getElementById('liveBadge').classList.toggle('off',!on);
+  document.getElementById('liveText').textContent = on ? 'EN VIVO' : 'SIN CONEXIÓN';
+});
+
+// ── DATOS ──
+onValue(ref(db,'vorynq/sales'), snap => {
+  ST.sales = Object.entries(snap.val()||{}).map(([k,v]) => ({ ...v, _key:k }));
+  renderSales(); renderRanking(); touch();
+});
+onValue(ref(db,'vorynq/retiros'), snap => { ST.retiros = Object.values(snap.val()||{}); renderRetiros(); touch(); });
+onValue(ref(db,'vorynq/products'), snap => { ST.products = snap.val()||{}; renderStock(); renderRanking(); });
+onValue(ref(db,'vorynq/stock'), snap => { ST.stock = snap.val()||{}; renderStock(); });
+
+const validSales = () => ST.sales.filter(s => !s.anulada);
+
+// ── VENTAS + RECAUDACIÓN ──
+function renderSales(){
+  const sales = ST.sales;
+  const valid = validSales();
+  const barras = {};
+  valid.forEach(s => {
+    if (s.organizer) return;
+    if (!barras[s.barra]) barras[s.barra] = { total:0, count:0, byMethod:{} };
+    barras[s.barra].total += s.total||0;
+    barras[s.barra].count++;
+    const m = PAGOS[pagoKey(s)] || pagoKey(s);
+    barras[s.barra].byMethod[m] = (barras[s.barra].byMethod[m]||0) + (s.total||0);
+  });
+  const grandTotal = Object.values(barras).reduce((a,b)=>a+b.total,0);
+  const anuladas = sales.length - valid.length;
+  document.getElementById('grandTotal').textContent = fmt(grandTotal);
+  document.getElementById('totalVentas').textContent = valid.filter(s=>!s.organizer).length;
+  document.getElementById('ventasSub').textContent = 'transacciones' + (anuladas ? ' · ' + anuladas + ' anuladas' : '');
+  document.getElementById('totalOrg').textContent = valid.filter(s=>s.organizer).length;
+
+  const el = document.getElementById('barrasGrid');
+  if (!Object.keys(barras).length) el.innerHTML = '<div class="no-data">Sin ventas registradas aún</div>';
+  else el.innerHTML = Object.entries(barras).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>{
+    const pct = grandTotal>0 ? Math.round(d.total/grandTotal*100) : 0;
+    const methods = Object.entries(d.byMethod).map(([m,v])=>`<span class="method-tag">${esc(m)}: ${fmt(v)}</span>`).join('');
+    return `<div class="barra-card"><div class="barra-card-top"><div class="barra-name">${esc(name)}</div><div class="barra-pct">${pct}%</div></div><div class="barra-total">${fmt(d.total)}</div><div class="barra-bar-track"><div class="barra-bar-fill" style="width:${pct}%"></div></div><div class="barra-meta">${d.count} ventas</div><div class="methods-row">${methods}</div></div>`;
+  }).join('');
+
+  // Opciones del filtro de barras
+  const sel = document.getElementById('fBarra');
+  const names = [...new Set(sales.map(s=>s.barra).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas las barras</option>' + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.value = names.includes(cur) ? cur : '';
+
+  renderFeed();
+}
+
+function filteredSales(){
+  const b = document.getElementById('fBarra').value;
+  const p = document.getElementById('fPago').value;
+  const e = document.getElementById('fEstado').value;
+  return ST.sales.filter(s =>
+    (!b || s.barra === b) &&
+    (!p || pagoKey(s) === p) &&
+    (!e || (e === 'anulada' ? !!s.anulada : !s.anulada)));
+}
+
+function renderFeed(){
+  const list = filteredSales().sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+  document.getElementById('salesCount').textContent = ST.sales.length ? '('+list.length+(list.length!==ST.sales.length?' de '+ST.sales.length:'')+')' : '';
+  const sum = list.filter(s=>!s.anulada && !s.organizer).reduce((a,s)=>a+(s.total||0),0);
+  const filtering = document.getElementById('fBarra').value || document.getElementById('fPago').value || document.getElementById('fEstado').value;
+  document.getElementById('filterSum').textContent = filtering ? `Total filtrado (sin anuladas ni consumos org.): ${fmt(sum)}` : '';
+  const feed = document.getElementById('salesFeed');
+  if (!list.length) { feed.innerHTML = '<div class="no-data">'+(ST.sales.length?'Ninguna venta coincide con el filtro':'Sin ventas aún')+'</div>'; return; }
+  feed.innerHTML = list.map(s=>{
+    const items = (s.items||[]).map(i=>`${esc(i.emoji||'')} ${esc(i.name)} x${i.qty}`).join(', ');
+    const isOrg = !!s.organizer;
+    const tag = s.anulada ? `<div class="anul-tag">ANULADA ${esc(s.anuladaTime||'')}${s.anuladaPor?' · '+esc(s.anuladaPor):''}</div>` : '';
+    return `<div class="feed-item ${isOrg?'org':''} ${s.anulada?'anulada':''}"><div><div class="feed-barra">${esc(s.barra||'—')}${s.operador?' · '+esc(s.operador):''}</div><div class="feed-items">${items}</div>${tag}</div><div class="feed-right"><div class="feed-amount ${isOrg?'org-amount':''}">${isOrg?'ORG':fmt(s.total)}</div><div class="feed-time">${esc(s.time||'')} · ${esc(isOrg ? 'org: '+s.organizer : (PAGOS[pagoKey(s)]||''))}</div></div></div>`;
+  }).join('');
+}
+['fBarra','fPago','fEstado'].forEach(id=>document.getElementById(id).addEventListener('change', renderFeed));
 
 // ── RETIROS ──
-onValue(ref(db,'underhertz/retiros'), snap=>{
-  const retiros=Object.values(snap.val()||{});
-  document.getElementById('totalRetiros').textContent=fmt(retiros.reduce((s,r)=>s+(r.monto||0),0));
-  const el=document.getElementById('retirosList');
-  if(!retiros.length){el.innerHTML='<div class="no-data">Sin retiros</div>';return;}
-  el.innerHTML=[...retiros].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
-    .map(r=>`<div class="retiro-item"><div><div class="retiro-nombre">${r.nombre}</div><div class="retiro-meta">${r.barra} · ${r.time}${r.nota?' · '+r.nota:''}</div></div><div class="retiro-monto">${fmt(r.monto)}</div></div>`).join('');
-});
+function renderRetiros(){
+  const retiros = ST.retiros;
+  document.getElementById('totalRetiros').textContent = fmt(retiros.reduce((s,r)=>s+(r.monto||0),0));
+  const el = document.getElementById('retirosList');
+  if (!retiros.length) { el.innerHTML='<div class="no-data">Sin retiros</div>'; return; }
+  el.innerHTML = [...retiros].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
+    .map(r=>`<div class="retiro-item"><div><div class="retiro-nombre">${esc(r.nombre)}</div><div class="retiro-meta">${esc(r.barra)} · ${esc(r.time)}${r.nota?' · '+esc(r.nota):''}</div></div><div class="retiro-monto">${fmt(r.monto)}</div></div>`).join('');
+}
 
-// ── STOCK ──
-onValue(ref(db,'underhertz/products'), snap=>{
-  const products=Object.values(snap.val()||{});
-  const el=document.getElementById('stockGrid');
-  if(!products.length){el.innerHTML='<div class="no-data">Sin productos</div>';return;}
-  el.innerHTML=[...products].sort((a,b)=>(a.stock/Math.max(a.initialStock,1))-(b.stock/Math.max(b.initialStock,1)))
+// ── RANKING DE PRODUCTOS ──
+function productStats(){
+  const map = {};
+  validSales().forEach(s=>{
+    (s.items||[]).forEach(i=>{
+      const k = i.name || '—';
+      if (!map[k]) map[k] = { name:k, emoji:i.emoji||'', units:0, org:0, money:0 };
+      if (s.organizer) map[k].org += i.qty||0;
+      else { map[k].units += i.qty||0; map[k].money += (i.price||0)*(i.qty||0); }
+    });
+  });
+  return Object.values(map).sort((a,b)=>(b.units+b.org)-(a.units+a.org) || b.money-a.money);
+}
+function renderRanking(){
+  const stats = productStats();
+  const el = document.getElementById('rankBox');
+  if (!stats.length) { el.innerHTML='<div class="no-data">Sin ventas aún</div>'; return; }
+  const max = Math.max(...stats.map(x=>x.units+x.org),1);
+  el.innerHTML = `<div class="rank-row head"><span>#</span><span>Producto</span><span style="text-align:right">Vendidos</span><span style="text-align:right">Org.</span><span style="text-align:right">Recaudado</span></div>` +
+    stats.map((x,i)=>`<div class="rank-row"><span class="rank-pos">${i+1}</span><div class="rank-name">${esc(x.emoji)} ${esc(x.name)}<div class="rank-track"><div class="rank-fill" style="width:${Math.round((x.units+x.org)/max*100)}%"></div></div></div><span class="rank-num">${x.units}</span><span class="rank-org">${x.org||'—'}</span><span class="rank-money">${fmt(x.money)}</span></div>`).join('');
+}
+
+// ── STOCK (valor real desde vorynq/stock) ──
+function productList(){
+  return Object.values(ST.products||{}).filter(Boolean).map(p=>({
+    ...p, stock: ST.stock[p.id] !== undefined ? ST.stock[p.id] : p.stock
+  }));
+}
+function renderStock(){
+  const products = productList().filter(p=>!p.isCombo);
+  const el = document.getElementById('stockGrid');
+  if (!products.length) { el.innerHTML='<div class="no-data">Sin productos</div>'; return; }
+  el.innerHTML = [...products].sort((a,b)=>(a.stock/Math.max(a.initialStock,1))-(b.stock/Math.max(b.initialStock,1)))
     .map(p=>{
-      const pct=p.initialStock>0?Math.round(p.stock/p.initialStock*100):100;
-      const s=pct<=10?'critical':pct<=25?'low':'ok';
-      const label=pct<=10?'⚠ CRÍTICO':pct<=25?'↓ BAJO':'✓ OK';
-      return `<div class="stock-card ${s}"><div class="stock-emoji">${p.emoji||'📦'}</div><div class="stock-info"><div class="stock-name">${p.name}</div><div class="stock-nums">${p.stock} / ${p.initialStock}</div><div class="stock-track"><div class="stock-fill ${s}" style="width:${pct}%"></div></div><div class="stock-meta"><span class="stock-status ${s}">${label}</span><span>${p.initialStock-p.stock} vendidos</span></div></div></div>`;
+      const pct = p.initialStock>0 ? Math.max(0,Math.min(100,Math.round(p.stock/p.initialStock*100))) : 100;
+      const s = p.stock<=0||pct<=10 ? 'critical' : pct<=25 ? 'low' : 'ok';
+      const label = p.stock<=0 ? '✕ AGOTADO' : pct<=10 ? '⚠ CRÍTICO' : pct<=25 ? '↓ BAJO' : '✓ OK';
+      return `<div class="stock-card ${s}"><div class="stock-emoji">${esc(p.emoji||'📦')}</div><div class="stock-info"><div class="stock-name">${esc(p.name)}</div><div class="stock-nums">${p.stock} / ${p.initialStock}</div><div class="stock-track"><div class="stock-fill ${s}" style="width:${pct}%"></div></div><div class="stock-meta"><span class="stock-status ${s}">${label}</span><span>${Math.max(0,p.initialStock-p.stock)} vendidos</span></div></div></div>`;
     }).join('');
-});
+}
 
 // ── BARRAS ──
-onValue(ref(db,'underhertz/barras'), snap=>{
+onValue(ref(db,'vorynq/barras'), snap=>{
   const data=snap.val()||{};
+  ST.barras=data;
   const entries=Object.entries(data);
   const el=document.getElementById('barrasMgmt');
   if(!entries.length){el.innerHTML='<div class="no-data">No hay barras activas registradas</div>';return;}
-  el.innerHTML=entries.sort((a,b)=>a[1].name.localeCompare(b[1].name))
-    .map(([key,b])=>`<div class="mgmt-row"><div><div class="mgmt-name">${b.name}</div><div class="mgmt-meta">Operador: ${b.operador||'—'} · Última conexión: ${b.lastSeen?new Date(b.lastSeen).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'—'}</div></div><button class="del-btn" data-key="${key}" data-name="${b.name}">🗑 ELIMINAR</button></div>`)
-    .join('');
+  el.innerHTML=entries.sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||''))
+    .map(([key,b])=>{
+      const on = b.online !== false;
+      const last = b.lastSeen?new Date(b.lastSeen).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'—';
+      return `<div class="mgmt-row"><div><div class="mgmt-name"><span class="online-dot ${on?'on':'off'}"></span>${esc(b.name)}</div><div class="mgmt-meta">${on?'EN LÍNEA':'DESCONECTADA'} · Operador: ${esc(b.operador||'—')} · Última conexión: ${last}</div></div><button class="del-btn" data-key="${esc(key)}" data-name="${esc(b.name)}">🗑 ELIMINAR</button></div>`;
+    }).join('');
 
-  // Attach delete listeners
   el.querySelectorAll('.del-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const key=btn.dataset.key;
       const name=btn.dataset.name;
       if(!confirm(`¿Eliminar la barra "${name}"?\n\nLas ventas quedan en el historial.`))return;
       try{
-        await remove(ref(db,'underhertz/barras/'+key));
+        await remove(ref(db,'vorynq/barras/'+key));
         showToast('✓ BARRA ELIMINADA','green');
       }catch(e){
         showToast('⚠ ERROR: '+e.message,'');
@@ -301,22 +425,162 @@ onValue(ref(db,'underhertz/barras'), snap=>{
   });
 });
 
+// ── EXPORTAR EXCEL ──
+function buildExport(){
+  const sales=[...ST.sales].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+  const fecha=d=>d?d.toLocaleDateString('es-AR'):'';
+  const hora=(d,t)=>d?d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}):(t||'');
+
+  const ventas=[['N° venta','Fecha','Hora','Barra','Operador','Medio de pago','Organizador','Estado','Producto','Cantidad','Precio unitario','Subtotal','Total venta']];
+  sales.forEach((s,i)=>{
+    const d=s.timestamp?new Date(s.timestamp):null;
+    const items=(s.items&&s.items.length)?s.items:[{name:'',qty:'',price:''}];
+    const estado=s.anulada?'ANULADA':'VÁLIDA';
+    items.forEach((it,j)=>{
+      const qty=Number(it.qty)||0, price=Number(it.price)||0, free=!!s.organizer||!!s.anulada; // anuladas e invitaciones no suman
+      ventas.push([i+1,fecha(d),hora(d,s.time),s.barra||'',s.operador||'',(PAGOS[pagoKey(s)]||'').toUpperCase(),s.organizer||'',estado,
+        it.name||'',qty,s.organizer?0:price,free?0:qty*price,j>0?'':(free?0:(s.total||0))]);
+    });
+  });
+
+  const retiros=[['Fecha','Hora','Barra','Quién retiró','Monto','Nota']];
+  [...ST.retiros].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)).forEach(r=>{
+    const d=r.timestamp?new Date(r.timestamp):null;
+    retiros.push([fecha(d),hora(d,r.time),r.barra||'',r.nombre||'',Number(r.monto)||0,r.nota||'']);
+  });
+
+  const cierreMap={};
+  const get=b=>cierreMap[b]||(cierreMap[b]={ventas:0,efectivo:0,mercadopago:0,tarjeta:0,retiros:0,org:0,anuladas:0});
+  ST.sales.forEach(s=>{
+    const c=get(s.barra||'—');
+    if(s.anulada){c.anuladas++;return;}
+    if(s.organizer){c.org++;return;}
+    c.ventas++;
+    const k=pagoKey(s); c[k in c?k:'efectivo']+=s.total||0;
+  });
+  ST.retiros.forEach(r=>{get(r.barra||'—').retiros+=Number(r.monto)||0;});
+  const cierre=[['Barra','Ventas','Efectivo','Mercado Pago','Tarjeta','Total recaudado','Retiros','Efectivo en caja','Consumos org.','Anuladas']];
+  const tot={ventas:0,efectivo:0,mercadopago:0,tarjeta:0,retiros:0,org:0,anuladas:0};
+  Object.keys(cierreMap).sort().forEach(b=>{
+    const c=cierreMap[b];
+    Object.keys(tot).forEach(k=>tot[k]+=c[k]);
+    cierre.push([b,c.ventas,c.efectivo,c.mercadopago,c.tarjeta,c.efectivo+c.mercadopago+c.tarjeta,c.retiros,c.efectivo-c.retiros,c.org,c.anuladas]);
+  });
+  cierre.push(['TOTAL',tot.ventas,tot.efectivo,tot.mercadopago,tot.tarjeta,tot.efectivo+tot.mercadopago+tot.tarjeta,tot.retiros,tot.efectivo-tot.retiros,tot.org,tot.anuladas]);
+
+  const stockByName={};
+  productList().forEach(p=>{stockByName[p.name]=p;});
+  const productos=[['Producto','Unidades vendidas','Unidades org.','Recaudado','Stock actual','Stock inicial']];
+  productStats().forEach(x=>{
+    const p=stockByName[x.name];
+    productos.push([x.name,x.units,x.org,x.money,p&&!p.isCombo?p.stock:'',p&&!p.isCombo?p.initialStock:'']);
+  });
+  return {ventas,retiros,cierre,productos,count:sales.length};
+}
+
+function loadSheetJS(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload=()=>window.XLSX?res(window.XLSX):rej(new Error('XLSX no disponible'));
+    sc.onerror=()=>rej(new Error('No se pudo cargar XLSX'));
+    document.head.appendChild(sc);
+  });
+}
+
+function fileStamp(){
+  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+}
+
+function downloadCSV(rows,name){
+  const cell=v=>{const t=(v===null||v===undefined)?'':String(v);return /[";\n\r]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const csv='﻿'+rows.map(r=>r.map(cell).join(';')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+document.getElementById('exportSalesBtn').addEventListener('click', async ()=>{
+  if(!ST.sales.length && !ST.retiros.length){showToast('⚠ NO HAY DATOS PARA EXPORTAR','');return;}
+  const data=buildExport();
+  const name='vorynq-'+fileStamp();
+  try{
+    const XLSX=await loadSheetJS();
+    const wb=XLSX.utils.book_new();
+    const add=(rows,title,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,title);};
+    add(data.cierre,'Cierre por barra',[18,8,12,14,12,16,12,16,13,10]);
+    add(data.ventas,'Ventas',[9,11,7,16,14,15,14,9,24,9,14,12,12]);
+    add(data.retiros,'Retiros',[11,7,16,18,12,28]);
+    add(data.productos,'Productos',[24,17,13,13,12,12]);
+    XLSX.writeFile(wb,name+'.xlsx');
+    showToast('✓ EXCEL DESCARGADO','green');
+  }catch(e){
+    console.error(e);
+    // Sin conexión a la librería de Excel: se descargan CSV que también abren en Excel
+    downloadCSV(data.ventas,name+'-ventas.csv');
+    setTimeout(()=>downloadCSV(data.cierre,name+'-cierre.csv'),400);
+    setTimeout(()=>downloadCSV(data.retiros,name+'-retiros.csv'),800);
+    setTimeout(()=>downloadCSV(data.productos,name+'-productos.csv'),1200);
+    showToast('✓ EXPORTADO EN CSV','green');
+  }
+});
+
+// ── COPIA DE SEGURIDAD ──
+// Descarga TODOS los datos de VORYNQ en un archivo .json.
+// Para restaurarlo: Firebase → Realtime Database → nodo "vorynq" → ⋮ → Importar JSON.
+async function downloadBackup(label){
+  const snap=await get(ref(db,'vorynq'));
+  const data=snap.val()||{};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download=`vorynq-copia-${label?label+'-':''}${fileStamp()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+document.getElementById('backupBtn').addEventListener('click', async ()=>{
+  try{ await downloadBackup(); showToast('✓ COPIA DE SEGURIDAD DESCARGADA','green'); }
+  catch(e){ showToast('⚠ ERROR: '+e.message,''); console.error(e); }
+});
+
 // ── RESET ──
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
-  if(!confirm('¿RESETEAR TODA LA NOCHE?\n\nEsto borra ventas, retiros y barras en TODAS las PCs.\nEl stock vuelve al inicial.\n\nNo se puede deshacer.'))return;
+  if(!confirm('¿RESETEAR TODA LA NOCHE?\n\nEsto borra ventas, retiros y barras en TODAS las PCs.\nEl stock vuelve al inicial.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
   try{
-    await set(ref(db,'underhertz/sales'),null);
-    await set(ref(db,'underhertz/retiros'),null);
-    await set(ref(db,'underhertz/barras'),null);
+    await downloadBackup('antes-del-reset');
+    await set(ref(db,'vorynq/sales'),null);
+    await set(ref(db,'vorynq/retiros'),null);
+    await set(ref(db,'vorynq/barras'),null);
     // Reset stock
-    const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'underhertz/products'),s=>{u();res(s);});});
+    const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'vorynq/products'),s=>{u();res(s);});});
     const products=productsSnap.val();
     if(products){
       const resetStock={};
       Object.values(products).forEach(p=>{resetStock[p.id]=p.initialStock||p.stock;});
-      await set(ref(db,'underhertz/stock'),resetStock);
+      await set(ref(db,'vorynq/stock'),resetStock);
     }
     showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS','green');
+  }catch(e){
+    showToast('⚠ ERROR: '+e.message,'');
+    console.error(e);
+  }
+});
+
+// ── STOCK EN CERO ──
+document.getElementById('zeroStockBtn').addEventListener('click', async ()=>{
+  if(!confirm('¿PONER TODO EL STOCK EN CERO?\n\nEl stock de todos los productos queda en 0 en TODAS las barras.\nLas ventas y retiros NO se borran.\n\nNo se puede deshacer.'))return;
+  try{
+    const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'vorynq/products'),s=>{u();res(s);});});
+    const products=productsSnap.val();
+    if(!products){showToast('⚠ NO HAY PRODUCTOS CARGADOS','');return;}
+    const zero={};
+    Object.values(products).forEach(p=>{zero[p.id]=0;});
+    await set(ref(db,'vorynq/stock'),zero);
+    // También en el catálogo, para que el panel lo muestre en 0
+    await Promise.all(Object.keys(products).map(k=>set(ref(db,'vorynq/products/'+k+'/stock'),0)));
+    showToast('✓ STOCK EN CERO EN TODAS LAS BARRAS','green');
   }catch(e){
     showToast('⚠ ERROR: '+e.message,'');
     console.error(e);
