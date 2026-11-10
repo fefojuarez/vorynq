@@ -573,11 +573,10 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
 
 // ── VENTAS EN CERO ──
 document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
-  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
+  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nNo se puede deshacer.'))return;
   const btn=document.getElementById('zeroSalesBtn');
   btn.disabled=true; btn.textContent='⏳ PONIENDO VENTAS EN CERO…';
   try{
-    await downloadBackup('antes-de-ventas-en-cero');
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
     // "Vendidos" vuelve a 0: el stock actual pasa a ser el stock inicial
