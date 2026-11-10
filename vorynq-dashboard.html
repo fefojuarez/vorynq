@@ -187,6 +187,7 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
       <div class="sec-title">🖥 Gestión de barras</div>
       <div id="barrasMgmt"><div class="no-data">Cargando...</div></div>
       <button class="export-btn" id="backupBtn" style="width:auto;margin-right:6px;">💾 DESCARGAR COPIA DE SEGURIDAD</button>
+      <button class="reset-btn" id="zeroSalesBtn">🧾 PONER VENTAS EN CERO</button>
       <button class="reset-btn" id="resetBtn">🔄 RESETEAR NOCHE COMPLETA</button>
       <button class="reset-btn" id="zeroStockBtn">📦 PONER STOCK EN CERO</button>
     </div>
@@ -553,6 +554,8 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
     await set(ref(db,'vorynq/barras'),null);
+    // Avisar a todas las barras que borren sus ventas y totales locales
+    await update(ref(db,'vorynq/config'),{resetAt:Date.now()});
     // Reset stock
     const productsSnap=await new Promise(res=>{const u=onValue(ref(db,'vorynq/products'),s=>{u();res(s);});});
     const products=productsSnap.val();
@@ -562,6 +565,21 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
       await set(ref(db,'vorynq/stock'),resetStock);
     }
     showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS','green');
+  }catch(e){
+    showToast('⚠ ERROR: '+e.message,'');
+    console.error(e);
+  }
+});
+
+// ── VENTAS EN CERO ──
+document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
+  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre y resumen).\nEl stock y los productos NO cambian.\n\nAntes se descarga automáticamente una copia de seguridad.'))return;
+  try{
+    await downloadBackup('antes-de-ventas-en-cero');
+    await set(ref(db,'vorynq/sales'),null);
+    await set(ref(db,'vorynq/retiros'),null);
+    await update(ref(db,'vorynq/config'),{resetAt:Date.now()});
+    showToast('✓ VENTAS EN CERO EN TODAS LAS BARRAS','green');
   }catch(e){
     showToast('⚠ ERROR: '+e.message,'');
     console.error(e);

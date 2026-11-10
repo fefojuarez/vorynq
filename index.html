@@ -1087,6 +1087,8 @@ function initFirebase() {
       if (/^\d{4}$/.test(cfg.adminPin || '') && cfg.adminPin !== PINS.admin) { PINS.admin = cfg.adminPin; pinsChanged = true; }
       if (/^\d{4}$/.test(cfg.operadorPin || '') && cfg.operadorPin !== PINS.operador) { PINS.operador = cfg.operadorPin; pinsChanged = true; }
       if (pinsChanged) localStorage.setItem('vq_pins', JSON.stringify(PINS));
+      // Reinicio de ventas ordenado desde el panel u otra barra
+      if (cfg.resetAt) applyRemoteReset(Number(cfg.resetAt));
     });
 
     // Registrar esta barra (con estado en línea / desconectada)
@@ -2401,10 +2403,48 @@ function renderResumenPanel(el) {
   `;
 }
 
+// ═══════════════════════════════════════════════
+// REINICIO DE VENTAS EN TODAS LAS BARRAS
+// Cuando el panel (u otra barra) pone las ventas en cero, guarda la hora en
+// vorynq/config/resetAt. Cada barra borra sus ventas, retiros y total locales
+// anteriores a esa hora, y descarta las que tenía pendientes de subir.
+// ═══════════════════════════════════════════════
+function applyRemoteReset(resetAt) {
+  if (!resetAt || isNaN(resetAt)) return;
+  const last = Number(localStorage.getItem('vq_lastReset') || 0);
+  if (resetAt <= last) return;
+  localStorage.setItem('vq_lastReset', String(resetAt));
+  const after = x => x && x.timestamp && new Date(x.timestamp).getTime() >= resetAt;
+  const before = salesLog.length + retiroLog.length;
+  salesLog = salesLog.filter(after);
+  retiroLog = retiroLog.filter(after);
+  totalLocal = salesLog.filter(s => !s.anulada && !s.organizer).reduce((a, s) => a + (s.total || 0), 0);
+  localStorage.setItem('vq_sales', JSON.stringify(salesLog));
+  localStorage.setItem('vq_retiros', JSON.stringify(retiroLog));
+  localStorage.setItem('vq_total', String(totalLocal));
+  // Descartar ventas/retiros/anulaciones viejas que no llegaron a subirse
+  const keepIds = new Set(salesLog.map(s => s.id).concat(retiroLog.map(r => r.id)));
+  pendingOps = pendingOps.filter(o => {
+    const m = /^vorynq\/(sales|retiros)\/([^/]+)/.exec(o.path);
+    return !m || keepIds.has(m[2]);
+  });
+  savePending();
+  if (document.getElementById('topTotalLocal')) updateTotalDisplay();
+  // Volver a figurar en "Gestión de barras" del panel
+  if (fbConnected && SESSION.barra) registerBarraPresence();
+  if (before) {
+    if (['ventas', 'cierre', 'resumen', 'retiro'].includes(currentPanel)) closePanel();
+    showToast('✓ VENTAS REINICIADAS DESDE EL PANEL', 'green');
+  }
+}
+
 function resetNight() {
   if (!confirm('¿Resetear todos los datos de esta noche? Esto borrará ventas, retiros y totales en todas las barras.')) return;
   salesLog = []; retiroLog = []; totalLocal = 0;
   pendingOps = pendingOps.filter(o => !/^vorynq\/(sales|retiros)\//.test(o.path)); savePending();
+  const resetAt = Date.now();
+  localStorage.setItem('vq_lastReset', String(resetAt));
+  queueWrite({ kind: 'update', path: 'vorynq/config', value: { resetAt } });
   localStorage.setItem('vq_sales', '[]');
   localStorage.setItem('vq_retiros', '[]');
   localStorage.setItem('vq_total', '0');
