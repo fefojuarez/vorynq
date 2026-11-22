@@ -150,6 +150,19 @@ body{background:var(--bg);color:var(--white);font-family:'Syne',sans-serif;min-h
 body.viewing .view-banner{display:flex;}
 body.viewing .live-only{display:none !important;}
 @media(max-width:768px){.hist-row{grid-template-columns:1fr 90px 70px;}.hist-row>*:nth-child(3),.hist-row>*:nth-child(4){display:none;}}
+.login-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:12px;font-family:'DM Mono',monospace;font-size:12px;margin-bottom:8px;}
+.login-input:focus{outline:none;border-color:var(--blue);}
+.login-btn{width:100%;background:var(--blue);border:none;color:white;padding:13px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;cursor:pointer;}
+.login-btn:disabled{opacity:0.6;}
+.legacy-link{margin-top:10px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--orange);cursor:pointer;}
+.session-box{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);letter-spacing:1px;}
+.session-box button{background:var(--surface2);border:1px solid var(--border);color:var(--gray-light);padding:5px 9px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;}
+.session-box button:hover{color:var(--white);border-color:var(--red);}
+.arq-diff{font-family:'Bebas Neue',sans-serif;font-size:20px;white-space:nowrap;letter-spacing:2px;margin-bottom:6px;}
+.arq-diff.small{font-size:16px;flex-shrink:0;}
+.arq-diff.ok{color:var(--green);} .arq-diff.bad{color:var(--red);} .arq-diff.warn{color:var(--orange);}
+.arq-total{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:10px 14px;margin-bottom:8px;background:var(--surface);border:1px solid var(--border);}
+.arq-total.ok b{color:var(--green);} .arq-total.bad b{color:var(--red);} .arq-total.warn b{color:var(--orange);}
 .no-data{padding:20px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--gray);letter-spacing:2px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 22px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;z-index:9999;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;background:var(--blue);color:white;}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -161,18 +174,28 @@ body.viewing .live-only{display:none !important;}
 <body>
 
 <div id="pinScreen">
-  <div class="pin-box">
+  <div class="pin-box" style="width:min(360px,92vw);">
     <div class="pin-top"><div class="pin-logo">VORYNQ</div><div class="pin-sub">DASHBOARD ORGANIZADORES</div></div>
     <div class="pin-body">
-      <span class="pin-label">PIN de administrador</span>
-      <div class="pin-dots"><div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div></div>
-      <div class="pin-numpad">
-        <div class="pin-key" onclick="pk('1')">1</div><div class="pin-key" onclick="pk('2')">2</div><div class="pin-key" onclick="pk('3')">3</div>
-        <div class="pin-key" onclick="pk('4')">4</div><div class="pin-key" onclick="pk('5')">5</div><div class="pin-key" onclick="pk('6')">6</div>
-        <div class="pin-key" onclick="pk('7')">7</div><div class="pin-key" onclick="pk('8')">8</div><div class="pin-key" onclick="pk('9')">9</div>
-        <div class="pin-key del" onclick="pd()">⌫</div><div class="pin-key" onclick="pk('0')">0</div><div class="pin-key enter" onclick="pc()">ENTRAR</div>
+      <div id="loginForm">
+        <span class="pin-label">Iniciá sesión con tu usuario</span>
+        <input class="login-input" id="dEmail" type="email" placeholder="Email" autocomplete="username">
+        <input class="login-input" id="dPass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button class="login-btn" id="dLoginBtn">INGRESAR</button>
+        <div class="pin-error" id="loginErr"></div>
+        <div class="legacy-link" id="legacyLink" style="display:none;">Firebase todavía no tiene usuario y contraseña activados → entrar con el PIN anterior</div>
       </div>
-      <div class="pin-error" id="pinErr"></div>
+      <div id="legacyPin" style="display:none;">
+        <span class="pin-label">PIN de administrador (modo anterior)</span>
+        <div class="pin-dots"><div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div></div>
+        <div class="pin-numpad">
+          <div class="pin-key" onclick="pk('1')">1</div><div class="pin-key" onclick="pk('2')">2</div><div class="pin-key" onclick="pk('3')">3</div>
+          <div class="pin-key" onclick="pk('4')">4</div><div class="pin-key" onclick="pk('5')">5</div><div class="pin-key" onclick="pk('6')">6</div>
+          <div class="pin-key" onclick="pk('7')">7</div><div class="pin-key" onclick="pk('8')">8</div><div class="pin-key" onclick="pk('9')">9</div>
+          <div class="pin-key del" onclick="pd()">⌫</div><div class="pin-key" onclick="pk('0')">0</div><div class="pin-key enter" onclick="pc()">ENTRAR</div>
+        </div>
+        <div class="pin-error" id="pinErr"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -181,7 +204,10 @@ body.viewing .live-only{display:none !important;}
   <div class="top-bar">
     <div class="top-logo">VORY<span>NQ</span></div>
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div><span id="liveText">CONECTANDO</span></div>
-    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.16-b</div></div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="session-box"><span id="sessionEmail"></span><button id="logoutBtn">CERRAR SESIÓN</button></div>
+      <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.21</div></div>
+    </div>
   </div>
   <div class="view-banner" id="viewBanner"><span>📚 VIENDO HISTORIAL: <b id="viewName"></b> · los datos no cambian</span><button id="backLive">← VOLVER A EN VIVO</button></div>
   <div class="body">
@@ -208,10 +234,11 @@ body.viewing .live-only{display:none !important;}
         </div>
         <div class="filter-sum" id="filterSum"></div>
         <div class="feed-list" id="salesFeed"><div class="no-data">Sin ventas aún</div></div>
-        <button class="export-btn" id="exportSalesBtn">⬇ EXPORTAR EXCEL (VENTAS · RETIROS · CIERRE · PRODUCTOS)</button>
+        <button class="export-btn" id="exportSalesBtn">⬇ EXPORTAR EXCEL (VENTAS · RETIROS · CIERRE · ARQUEOS · PRODUCTOS)</button>
       </div>
       <div class="section"><div class="sec-title">💸 Retiros de caja</div><div class="retiros-box" id="retirosList"><div class="no-data">Sin retiros</div></div></div>
     </div>
+    <div class="section"><div class="sec-title">🧮 Arqueos de caja</div><div id="arqueosBox"><div class="no-data">Cargando...</div></div></div>
     <div class="section"><div class="sec-title">🏆 Productos más vendidos</div><div class="rank-box" id="rankBox"><div class="no-data">Sin ventas aún</div></div></div>
     <div class="section"><div class="sec-title">📚 Historial de eventos</div>
       <div class="rank-box" id="histList"><div class="no-data">Cargando...</div></div>
@@ -243,15 +270,15 @@ function pc(){
   try{saved=JSON.parse(localStorage.getItem('vq_pins')||'{}')||{};}catch(e){}
   const adminPin=window._remoteAdminPin||saved.admin||'0000';
   if(buf===adminPin){
-    document.getElementById('pinScreen').style.display='none';
-    document.getElementById('dashboard').style.display='block';
+    window._legacyOk=true;
+    document.dispatchEvent(new Event('legacyLogin'));
   } else {
     document.getElementById('pinErr').textContent='PIN INCORRECTO — INTENTÁ DE NUEVO';
     buf='';upd();
   }
 }
 document.addEventListener('keydown',e=>{
-  if(document.getElementById('pinScreen').style.display!=='none'){
+  if(document.getElementById('pinScreen').style.display!=='none'&&document.getElementById('legacyPin').style.display!=='none'){
     if(e.key>='0'&&e.key<='9')pk(e.key);
     else if(e.key==='Backspace')pd();
     else if(e.key==='Enter')pc();
@@ -269,6 +296,8 @@ function showToast(msg,type=''){
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, remove, set, update, get, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAk9o3DwTQ0b7CZa555DIEHbTY5Ype8yGI",
@@ -282,13 +311,63 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+
+// ── INICIO DE SESIÓN (usuario y contraseña) ──
+// El panel no lee ningún dato hasta que se inicia sesión.
+await new Promise(resolve => {
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    document.getElementById('pinScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    resolve();
+  };
+  onAuthStateChanged(auth, u => {
+    window._authUser = u || null;
+    document.getElementById('sessionEmail').textContent = u ? u.email : (window._legacyOk ? 'MODO PIN ANTERIOR' : '');
+    if (u) start();
+    else if (started && !window._legacyOk) location.reload();
+  });
+  document.addEventListener('legacyLogin', start);
+  const em = document.getElementById('dEmail'), pw = document.getElementById('dPass'), btn = document.getElementById('dLoginBtn'), err = document.getElementById('loginErr');
+  try { em.value = localStorage.getItem('vq_lastEmail') || ''; } catch(e) {}
+  const login = async () => {
+    if (!em.value.trim() || !pw.value) { err.textContent = 'COMPLETÁ EMAIL Y CONTRASEÑA'; return; }
+    btn.disabled = true; btn.textContent = 'INGRESANDO…'; err.textContent = '';
+    try {
+      await signInWithEmailAndPassword(auth, em.value.trim(), pw.value);
+      try { localStorage.setItem('vq_lastEmail', em.value.trim()); } catch(e) {}
+    } catch (e) {
+      const code = (e && e.code) || '';
+      if (/operation-not-allowed|configuration-not-found/.test(code)) {
+        err.textContent = 'FALTA ACTIVAR EMAIL/CONTRASEÑA EN FIREBASE (Authentication)';
+        document.getElementById('legacyLink').style.display = 'block';
+      } else err.textContent =
+        /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(code) ? 'EMAIL O CONTRASEÑA INCORRECTOS' :
+        /too-many-requests/.test(code) ? 'DEMASIADOS INTENTOS. ESPERÁ UNOS MINUTOS' :
+        /network/.test(code) ? 'SIN CONEXIÓN. REVISÁ INTERNET' : 'NO SE PUDO INGRESAR: ' + (code || e.message);
+    } finally { btn.disabled = false; btn.textContent = 'INGRESAR'; }
+  };
+  btn.addEventListener('click', login);
+  [em, pw].forEach(x => x.addEventListener('keydown', e => { if (e.key === 'Enter') login(); }));
+  document.getElementById('legacyLink').addEventListener('click', async () => {
+    try { const v = (await get(ref(db, 'vorynq/config/adminPin'))).val(); if (/^\d{4}$/.test(v || '')) window._remoteAdminPin = v; } catch(e) {}
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('legacyPin').style.display = 'block';
+  });
+});
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  try { await signOut(auth); } catch(e) {}
+  location.reload();
+});
 const fmt = n => '$'+(n||0).toLocaleString('es-AR');
 const fmtQ = n => (Math.round((Number(n)||0)*100)/100).toLocaleString('es-AR',{maximumFractionDigits:2});
 const PAGOS = { efectivo:'Efectivo', mercadopago:'Mercado Pago', tarjeta:'Tarjeta', organizador:'Organizador' };
 const pagoKey = s => s.organizer ? 'organizador' : (s.paymentMethod || 'efectivo');
 const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ST = { sales: [], retiros: [], products: {}, stock: {}, barras: {} };   // lo que se muestra
-const LIVE = { sales: [], retiros: [], products: {}, stock: {} };             // datos en vivo
+const ST = { sales: [], retiros: [], products: {}, stock: {}, barras: {}, arqueos: [] };   // lo que se muestra
+const LIVE = { sales: [], retiros: [], products: {}, stock: {}, arqueos: [] };             // datos en vivo
 
 function touch(){
   document.getElementById('lastUpdate').textContent='Actualizado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -315,6 +394,7 @@ onValue(ref(db,'vorynq/sales'), snap => {
 });
 onValue(ref(db,'vorynq/retiros'), snap => { LIVE.retiros = Object.values(snap.val()||{}); if (VIEW) return; ST.retiros = LIVE.retiros; renderRetiros(); touch(); });
 onValue(ref(db,'vorynq/products'), snap => { LIVE.products = snap.val()||{}; if (VIEW) return; ST.products = LIVE.products; renderStock(); renderRanking(); });
+onValue(ref(db,'vorynq/arqueos'), snap => { LIVE.arqueos = Object.values(snap.val()||{}); if (VIEW) return; ST.arqueos = LIVE.arqueos; renderArqueos(); });
 onValue(ref(db,'vorynq/stock'), snap => { LIVE.stock = snap.val()||{}; if (VIEW) return; ST.stock = LIVE.stock; renderStock(); });
 
 const validSales = () => ST.sales.filter(s => !s.anulada);
@@ -391,7 +471,7 @@ function renderRetiros(){
   const el = document.getElementById('retirosList');
   if (!retiros.length) { el.innerHTML='<div class="no-data">Sin retiros</div>'; return; }
   el.innerHTML = [...retiros].sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
-    .map(r=>`<div class="retiro-item"><div><div class="retiro-nombre">${esc(r.nombre)}</div><div class="retiro-meta">${esc(r.barra)} · ${esc(r.time)}${r.nota?' · '+esc(r.nota):''}</div></div><div class="retiro-monto">${fmt(r.monto)}</div></div>`).join('');
+    .map(r=>`<div class="retiro-item"><div><div class="retiro-nombre">${esc(r.nombre)}</div><div class="retiro-meta">${esc(r.barra)} · ${esc(r.time)}${r.autorizadoPor?' · autorizó '+esc(r.autorizadoPor):''}${r.nota?' · '+esc(r.nota):''}</div></div><div class="retiro-monto">${fmt(r.monto)}</div></div>`).join('');
 }
 
 // ── RANKING DE PRODUCTOS ──
@@ -482,10 +562,10 @@ function buildExport(){
     });
   });
 
-  const retiros=[['Fecha','Hora','Barra','Quién retiró','Monto','Nota']];
+  const retiros=[['Fecha','Hora','Barra','Quién retiró','Monto','Nota','Autorizó','Operador']];
   [...ST.retiros].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)).forEach(r=>{
     const d=r.timestamp?new Date(r.timestamp):null;
-    retiros.push([fecha(d),hora(d,r.time),r.barra||'',r.nombre||'',Number(r.monto)||0,r.nota||'']);
+    retiros.push([fecha(d),hora(d,r.time),r.barra||'',r.nombre||'',Number(r.monto)||0,r.nota||'',r.autorizadoPor||'',r.operador||'']);
   });
 
   const cierreMap={};
@@ -498,14 +578,25 @@ function buildExport(){
     const k=pagoKey(s); c[k in c?k:'efectivo']+=s.total||0;
   });
   ST.retiros.forEach(r=>{get(r.barra||'—').retiros+=Number(r.monto)||0;});
-  const cierre=[['Barra','Ventas','Efectivo','Mercado Pago','Tarjeta','Total recaudado','Retiros','Efectivo en caja','Consumos org.','Anuladas']];
+  const lastA=latestArqueos(ST.arqueos);
+  const cierre=[['Barra','Ventas','Efectivo','Mercado Pago','Tarjeta','Total recaudado','Retiros','Efectivo en caja','Consumos org.','Anuladas','Fondo inicial','Efectivo esperado','Efectivo contado','Diferencia']];
   const tot={ventas:0,efectivo:0,mercadopago:0,tarjeta:0,retiros:0,org:0,anuladas:0};
   Object.keys(cierreMap).sort().forEach(b=>{
     const c=cierreMap[b];
     Object.keys(tot).forEach(k=>tot[k]+=c[k]);
-    cierre.push([b,c.ventas,c.efectivo,c.mercadopago,c.tarjeta,c.efectivo+c.mercadopago+c.tarjeta,c.retiros,c.efectivo-c.retiros,c.org,c.anuladas]);
+    const a=lastA[b];
+    cierre.push([b,c.ventas,c.efectivo,c.mercadopago,c.tarjeta,c.efectivo+c.mercadopago+c.tarjeta,c.retiros,c.efectivo-c.retiros,c.org,c.anuladas,
+      a?a.fondo:'',a?a.esperado:'',a?a.contado:'',a?a.diferencia:'']);
   });
-  cierre.push(['TOTAL',tot.ventas,tot.efectivo,tot.mercadopago,tot.tarjeta,tot.efectivo+tot.mercadopago+tot.tarjeta,tot.retiros,tot.efectivo-tot.retiros,tot.org,tot.anuladas]);
+  const sumA=k=>Object.values(lastA).reduce((x,a)=>x+(Number(a[k])||0),0);
+  const hasA=Object.keys(lastA).length>0;
+  cierre.push(['TOTAL',tot.ventas,tot.efectivo,tot.mercadopago,tot.tarjeta,tot.efectivo+tot.mercadopago+tot.tarjeta,tot.retiros,tot.efectivo-tot.retiros,tot.org,tot.anuladas,
+    hasA?sumA('fondo'):'',hasA?sumA('esperado'):'',hasA?sumA('contado'):'',hasA?sumA('diferencia'):'']);
+  const arqueos=[['Fecha','Hora','Barra','Cajero','Autorizó','Fondo inicial','Ventas efectivo','Retiros','Esperado','Contado','Diferencia','Observaciones']];
+  [...(ST.arqueos||[])].sort((a,b)=>(a.srvTs||0)-(b.srvTs||0)).forEach(a=>{
+    const d=a.timestamp?new Date(a.timestamp):null;
+    arqueos.push([fecha(d),hora(d,a.time),a.barra||'',a.cajero||'',a.autorizadoPor||'',a.fondo||0,a.ventasEfectivo||0,a.retiros||0,a.esperado||0,a.contado||0,a.diferencia||0,a.nota||'']);
+  });
 
   const stockByName={};
   productList().forEach(p=>{stockByName[p.name]=p;});
@@ -514,7 +605,7 @@ function buildExport(){
     const p=stockByName[x.name];
     productos.push([x.name,x.units,x.org,x.money,p&&!p.isCombo?Math.round(p.stock*100)/100:'',p&&!p.isCombo?p.initialStock:'']);
   });
-  return {ventas,retiros,cierre,productos,count:sales.length};
+  return {ventas,retiros,cierre,productos,arqueos,count:sales.length};
 }
 
 function loadSheetJS(){
@@ -543,17 +634,18 @@ function downloadCSV(rows,name){
 }
 
 document.getElementById('exportSalesBtn').addEventListener('click', async ()=>{
-  if(!ST.sales.length && !ST.retiros.length){showToast('⚠ NO HAY DATOS PARA EXPORTAR','');return;}
+  if(!ST.sales.length && !ST.retiros.length && !(ST.arqueos||[]).length){showToast('⚠ NO HAY DATOS PARA EXPORTAR','');return;}
   const data=buildExport();
   const name = VIEW ? 'vorynq-' + VIEW.nombre.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'-') : 'vorynq-'+fileStamp();
   try{
     const XLSX=await loadSheetJS();
     const wb=XLSX.utils.book_new();
     const add=(rows,title,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=widths.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,title);};
-    add(data.cierre,'Cierre por barra',[18,8,12,14,12,16,12,16,13,10]);
+    add(data.cierre,'Cierre por barra',[18,8,12,14,12,16,12,16,13,10,13,16,15,12]);
     add(data.ventas,'Ventas',[9,11,7,16,14,15,14,9,24,9,14,12,12]);
-    add(data.retiros,'Retiros',[11,7,16,18,12,28]);
+    add(data.retiros,'Retiros',[11,7,16,18,12,28,14,14]);
     add(data.productos,'Productos',[24,17,13,13,12,12]);
+    add(data.arqueos,'Arqueos',[11,7,16,14,14,13,15,12,12,12,12,30]);
     XLSX.writeFile(wb,name+'.xlsx');
     showToast('✓ EXCEL DESCARGADO','green');
   }catch(e){
@@ -563,9 +655,40 @@ document.getElementById('exportSalesBtn').addEventListener('click', async ()=>{
     setTimeout(()=>downloadCSV(data.cierre,name+'-cierre.csv'),400);
     setTimeout(()=>downloadCSV(data.retiros,name+'-retiros.csv'),800);
     setTimeout(()=>downloadCSV(data.productos,name+'-productos.csv'),1200);
+    setTimeout(()=>downloadCSV(data.arqueos,name+'-arqueos.csv'),1600);
     showToast('✓ EXPORTADO EN CSV','green');
   }
 });
+
+// ══════════════════════════════════════════════
+// ARQUEOS DE CAJA
+// ══════════════════════════════════════════════
+const fmtDiff = d => Math.abs(d||0) < 1 ? '✓ CUADRA' : (d < 0 ? 'FALTAN ' : 'SOBRAN ') + fmt(Math.round(Math.abs(d)));
+const diffCls = d => Math.abs(d||0) < 1 ? 'ok' : (d < 0 ? 'bad' : 'warn');
+function latestArqueos(list){
+  const by = {};
+  (list||[]).forEach(a => { if (!a) return; const k = a.barra || '—'; if (!by[k] || (a.srvTs||0) > (by[k].srvTs||0)) by[k] = a; });
+  return by;
+}
+function renderArqueos(){
+  const el = document.getElementById('arqueosBox');
+  if (!el) return;
+  const list = [...(ST.arqueos||[])].sort((a,b)=>(b.srvTs||0)-(a.srvTs||0));
+  if (!list.length){ el.innerHTML = '<div class="no-data">Todavía no se guardó ningún arqueo. Se hace desde 🔒 Cierre en cada barra.</div>'; return; }
+  const last = latestArqueos(list);
+  const totalDiff = Object.values(last).reduce((a,x)=>a+(x.diferencia||0),0);
+  const cards = Object.values(last).sort((a,b)=>(a.barra||'').localeCompare(b.barra||'')).map(a=>`
+    <div class="barra-card"><div class="barra-card-top"><div class="barra-name">${esc(a.barra)}</div><div class="barra-pct">${esc(a.time||'')}</div></div>
+      <div class="arq-diff ${diffCls(a.diferencia)}">${fmtDiff(a.diferencia)}</div>
+      <div class="barra-meta">Esperado ${fmt(Math.round(a.esperado))} · contado ${fmt(Math.round(a.contado))}</div>
+      <div class="barra-meta">Cajero ${esc(a.cajero||'—')} · autorizó ${esc(a.autorizadoPor||'—')}</div></div>`).join('');
+  const rows = list.map(a=>`<div class="retiro-item"><div><div class="retiro-nombre">${esc(a.barra)} · ${esc(a.time||'')}</div>
+      <div class="retiro-meta">Fondo ${fmt(Math.round(a.fondo))} + efectivo ${fmt(Math.round(a.ventasEfectivo))} − retiros ${fmt(Math.round(a.retiros))} = ${fmt(Math.round(a.esperado))} · contado ${fmt(Math.round(a.contado))} · cajero ${esc(a.cajero||'—')} · autorizó ${esc(a.autorizadoPor||'—')}${a.nota?' · '+esc(a.nota):''}</div></div>
+      <div class="arq-diff small ${diffCls(a.diferencia)}">${fmtDiff(a.diferencia)}</div></div>`).join('');
+  el.innerHTML = `<div class="arq-total ${diffCls(totalDiff)}">Último arqueo de cada barra: <b>${fmtDiff(totalDiff)}</b></div>
+    <div class="barras-grid" style="margin-bottom:8px;">${cards}</div>
+    <div class="retiros-box">${rows}</div>`;
+}
 
 // ══════════════════════════════════════════════
 // VENTAS POR HORA (gráfico de barras, una sola serie)
@@ -677,11 +800,14 @@ function summarize(sales, retiros){
 async function archiveNight(name){
   const sales = LIVE.sales.map(({_key, ...s}) => s);
   const retiros = LIVE.retiros;
-  if (!sales.length && !retiros.length) return null;
+  const arqueos = LIVE.arqueos || [];
+  if (!sales.length && !retiros.length && !arqueos.length) return null;
   const id = 'ev' + Date.now();
-  const meta = { id, nombre: name, guardado: Date.now(), ...summarize(sales, retiros) };
+  const lastA = latestArqueos(arqueos);
+  const meta = { id, nombre: name, guardado: Date.now(), ...summarize(sales, retiros),
+    arqueos: Object.keys(lastA).length, diferenciaCaja: Object.values(lastA).reduce((a,x)=>a+(x.diferencia||0),0) };
   const asObj = arr => { const o={}; arr.forEach((x,i)=>{ o[x.id || ('i'+i)] = x; }); return o; };
-  await set(ref(db,'vorynq/historial/'+id), { meta, sales: asObj(sales), retiros: asObj(retiros), products: LIVE.products||{}, stock: LIVE.stock||{} });
+  await set(ref(db,'vorynq/historial/'+id), { meta, sales: asObj(sales), retiros: asObj(retiros), arqueos: asObj(arqueos), products: LIVE.products||{}, stock: LIVE.stock||{} });
   await set(ref(db,'vorynq/historialIndex/'+id), meta);
   return id;
 }
@@ -694,7 +820,7 @@ function defaultEventName(){
 
 // Pregunta el nombre y guarda. Devuelve false si el usuario canceló.
 async function askAndArchive(){
-  if (!LIVE.sales.length && !LIVE.retiros.length) return true;
+  if (!LIVE.sales.length && !LIVE.retiros.length && !(LIVE.arqueos||[]).length) return true;
   const name = prompt('Nombre para guardar esta noche en el HISTORIAL:\n(dejá vacío si no querés guardarla)', defaultEventName());
   if (name === null) return false;
   if (name.trim()) { await archiveNight(name.trim()); showToast('✓ NOCHE GUARDADA EN EL HISTORIAL','green'); }
@@ -712,7 +838,7 @@ function renderHistList(){
   const h = t => t ? new Date(t).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) : '';
   el.innerHTML = `<div class="hist-row head"><span>Evento</span><span style="text-align:right">Recaudado</span><span style="text-align:right">Ventas</span><span style="text-align:right">Ticket prom.</span><span></span></div>` +
     list.map(e=>`<div class="hist-row ${VIEW&&VIEW.id===e.id?'on':''}">
-      <div><div class="rank-name">${esc(e.nombre)}</div><div class="mgmt-meta">${f(e.desde)}${e.desde?' · '+h(e.desde)+' a '+h(e.hasta):''} · ${e.barras||0} barras${e.anuladas?' · '+e.anuladas+' anuladas':''}</div>
+      <div><div class="rank-name">${esc(e.nombre)}</div><div class="mgmt-meta">${f(e.desde)}${e.desde?' · '+h(e.desde)+' a '+h(e.hasta):''} · ${e.barras||0} barras${e.anuladas?' · '+e.anuladas+' anuladas':''}${e.arqueos?' · caja: '+fmtDiff(e.diferenciaCaja):''}</div>
         <div class="rank-track"><div class="rank-fill" style="width:${Math.round((e.total||0)/maxT*100)}%"></div></div></div>
       <span class="rank-money">${fmt(e.total)}</span><span class="rank-num">${e.ventas||0}</span><span class="rank-num">${fmt(e.ticketPromedio)}</span>
       <span style="display:flex;gap:4px;justify-content:flex-end;"><button class="hist-btn" data-view="${esc(e.id)}">VER</button><button class="del-btn" data-del="${esc(e.id)}" title="Eliminar">✕</button></span>
@@ -735,6 +861,7 @@ async function openEvent(id){
     VIEW = data.meta;
     ST.sales = Object.entries(data.sales||{}).map(([k,v])=>({ ...v, _key:k }));
     ST.retiros = Object.values(data.retiros||{});
+    ST.arqueos = Object.values(data.arqueos||{});
     ST.products = data.products||{};
     ST.stock = data.stock||{};
     document.body.classList.add('viewing');
@@ -746,7 +873,7 @@ async function openEvent(id){
 
 function backToLive(){
   VIEW = null;
-  Object.assign(ST, { sales:LIVE.sales, retiros:LIVE.retiros, products:LIVE.products, stock:LIVE.stock });
+  Object.assign(ST, { sales:LIVE.sales, retiros:LIVE.retiros, products:LIVE.products, stock:LIVE.stock, arqueos:LIVE.arqueos });
   document.body.classList.remove('viewing');
   renderAll();
 }
@@ -754,7 +881,7 @@ document.getElementById('backLive').addEventListener('click', backToLive);
 
 function renderAll(){
   ['fBarra','fPago','fEstado'].forEach(id=>document.getElementById(id).value='');
-  renderSales(); renderRetiros(); renderRanking(); renderStock(); renderHourly(); renderHistList();
+  renderSales(); renderRetiros(); renderArqueos(); renderRanking(); renderStock(); renderHourly(); renderHistList();
 }
 
 document.getElementById('archiveBtn').addEventListener('click', async ()=>{
@@ -790,6 +917,7 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
     await downloadBackup('antes-del-reset');
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
+    await set(ref(db,'vorynq/arqueos'),null);
     await set(ref(db,'vorynq/barras'),null);
     // Avisar a todas las barras que borren sus ventas y totales locales
     await update(ref(db,'vorynq/config'),{resetAt:serverTimestamp()});
@@ -810,7 +938,7 @@ document.getElementById('resetBtn').addEventListener('click', async ()=>{
 
 // ── VENTAS EN CERO ──
 document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
-  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas y retiros en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nNo se puede deshacer.'))return;
+  if(!confirm('¿PONER LAS VENTAS EN CERO?\n\nSe borran ventas, retiros y arqueos en el panel y en TODAS las barras (totales, cierre, resumen y "vendidos").\nEl stock actual y los productos NO cambian.\n\nNo se puede deshacer.'))return;
   const btn=document.getElementById('zeroSalesBtn');
   try{ if(!(await askAndArchive())) return; }
   catch(e){ alert('⚠ No se pudo guardar en el historial: '+e.message+'\n\nNo se borró nada.'); return; }
@@ -818,6 +946,7 @@ document.getElementById('zeroSalesBtn').addEventListener('click', async ()=>{
   try{
     await set(ref(db,'vorynq/sales'),null);
     await set(ref(db,'vorynq/retiros'),null);
+    await set(ref(db,'vorynq/arqueos'),null);
     // "Vendidos" vuelve a 0: el stock actual pasa a ser el stock inicial
     const prods=(await get(ref(db,'vorynq/products'))).val()||{};
     const stock=(await get(ref(db,'vorynq/stock'))).val()||{};
@@ -863,6 +992,11 @@ document.getElementById('zeroStockBtn').addEventListener('click', async ()=>{
     console.error(e);
   }
 });
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e)));
+}
 </script>
 </body>
 </html>

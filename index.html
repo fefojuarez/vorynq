@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>VORYNQ — Sistema de Barra</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#08080E">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <!-- Firebase -->
@@ -39,6 +42,15 @@ window._increment = increment;
 window._onDisconnect = onDisconnect;
 window._firebaseReady = true;
 document.dispatchEvent(new Event('firebaseReady'));
+
+// Usuario y contraseña (solo para Administración). Sesión en memoria: se cierra al cerrar ⚙ o la página.
+import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js').then(m => {
+  const auth = m.initializeAuth(app, { persistence: m.inMemoryPersistence });
+  window._signIn = (email, pass) => m.signInWithEmailAndPassword(auth, email, pass);
+  window._signOut = () => m.signOut(auth);
+  m.onAuthStateChanged(auth, u => { window._authUser = u || null; });
+  window._authReady = true;
+}).catch(e => console.warn('Inicio de sesión no disponible', e));
 </script>
 
 <style>
@@ -615,10 +627,12 @@ body {
 .ticket-progress { text-align:center; font-size:13px; letter-spacing:1px; margin-top:4px; }
 
 /* ── PIN MODAL ── */
+.pin-cancel { margin-top:10px; text-align:center; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--gray-light); cursor:pointer; padding:6px; }
+.pin-cancel:hover { color:var(--white); }
 .pin-overlay {
   position:fixed; inset:0;
   background:rgba(0,0,0,0.92);
-  z-index:8000;
+  z-index:9500;
   display:flex; align-items:center; justify-content:center;
   backdrop-filter:blur(10px);
 }
@@ -733,11 +747,14 @@ body {
       <label class="setup-label">Nombre de esta barra</label>
       <input class="setup-input" id="barraNameInput" placeholder="Ej: Barra Principal, Barra VIP...">
 
-      <label class="setup-label">Tu nombre (operador)</label>
-      <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
+      <div id="operadorRow">
+        <label class="setup-label">Tu nombre (operador)</label>
+        <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
+      </div>
+      <div id="setupPinHint" style="display:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);margin:4px 0 12px;">🔒 Al ingresar se te pide tu PIN personal</div>
 
       <div class="firebase-note" id="setupConn">⏳ CONECTANDO CON EL SERVIDOR…</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.16-b</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.21</div>
 
       <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
     </div>
@@ -749,7 +766,7 @@ body {
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="top-logo">VQ<span>.</span></div>
     <div class="top-barra" id="topBarraName">BARRA 1</div>
-    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.16-b</div>
+    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.21</div>
   </div>
   <div class="top-event" id="topEventName">—</div>
   <div style="display:flex;align-items:center;gap:12px;">
@@ -759,6 +776,7 @@ body {
       <div class="top-total" id="topTotalLocal">$0</div>
     </div>
     <div class="top-btns">
+      <button class="top-btn" id="topOperador" onclick="changeOperator()" title="Cambiar operador (cambio de turno)">👤 —</button>
       <button class="top-btn" onclick="openPanel('ventas')">🧾 Ventas</button>
       <button class="top-btn" onclick="openPanel('stock')">📦 Stock</button>
       <button class="top-btn" onclick="openPanel('retiro')">💰 Retiro</button>
@@ -857,6 +875,26 @@ body {
         <div class="pin-key enter" onclick="pinConfirm()">ENTRAR</div>
       </div>
       <div class="pin-error" id="pinError"></div>
+      <div class="pin-cancel" onclick="cancelPin()">CANCELAR</div>
+    </div>
+  </div>
+</div>
+
+<!-- INICIO DE SESIÓN (usuario y contraseña) -->
+<div class="pin-overlay" id="loginOverlay" style="display:none;">
+  <div class="pin-box" style="width:min(360px,92vw);">
+    <div class="pin-top">
+      <span class="pin-top-icon">🔐</span>
+      <span class="pin-top-title">INICIAR SESIÓN</span>
+    </div>
+    <div class="pin-body">
+      <span class="pin-label">Usuario y contraseña para: <b id="loginMotivo">Administración</b></span>
+      <input class="pf-input" id="loginEmail" type="email" placeholder="Email" autocomplete="username" style="margin-bottom:8px;">
+      <input class="pf-input" id="loginPass" type="password" placeholder="Contraseña" autocomplete="current-password" style="margin-bottom:12px;">
+      <button class="panel-btn green" id="loginBtn" style="width:100%;" onclick="doAdminLogin()">INGRESAR</button>
+      <div class="pin-error" id="loginError"></div>
+      <div class="pin-cancel" id="loginLegacy" style="display:none;color:var(--orange);" onclick="legacyAdminLogin()">ENTRAR CON PIN (HASTA ACTIVAR USUARIO Y CONTRASEÑA EN FIREBASE)</div>
+      <div class="pin-cancel" onclick="cancelAdminLogin()">CANCELAR</div>
     </div>
   </div>
 </div>
@@ -903,24 +941,25 @@ let pinBuffer = '';
 let pinCallback = null;
 let pinMode = '';
 
-function requirePin(mode, callback) {
-  pinMode = mode;
+function requirePin(mode, callback, title, label) {
+  pinMode = (mode === 'admin') ? 'encargado' : mode;
   pinCallback = callback;
   pinBuffer = '';
   updatePinDots();
   document.getElementById('pinError').textContent = '';
-
-  if (mode === 'admin') {
-    document.getElementById('pinIcon').textContent = '🔐';
-    document.getElementById('pinTitle').textContent = 'ACCESO ADMIN';
-    document.getElementById('pinLabel').textContent = 'Ingresá el PIN de administrador';
-  } else {
-    document.getElementById('pinIcon').textContent = '🔒';
-    document.getElementById('pinTitle').textContent = 'CONTRASEÑA';
-    document.getElementById('pinLabel').textContent = 'Ingresá tu PIN de operador';
-  }
-
+  const enc = pinMode === 'encargado';
+  document.getElementById('pinIcon').textContent = enc ? '🔐' : '🔒';
+  document.getElementById('pinTitle').textContent = title || (enc ? 'AUTORIZACIÓN' : 'INGRESO');
+  document.getElementById('pinLabel').textContent = label ||
+    (enc ? (hasUsers() ? 'PIN de un encargado' : 'PIN de administrador') : 'Ingresá tu PIN personal');
   document.getElementById('pinOverlay').style.display = 'flex';
+}
+
+function cancelPin() {
+  pinCallback = null;
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinOverlay').style.display = 'none';
 }
 
 function pinKey(k) {
@@ -942,25 +981,288 @@ function updatePinDots() {
   }
 }
 
-function pinConfirm() {
-  const correct = PINS[pinMode] || PINS.admin;
-  if (pinBuffer === correct) {
+let _pinBusy = false;
+async function pinConfirm() {
+  if (_pinBusy || pinBuffer.length < 4) return;
+  _pinBusy = true;
+  const entered = pinBuffer;
+  let user = null, denied = false;
+  try {
+    if (hasUsers()) {
+      user = await findUserByPin(entered);
+      if (user && (ROLES[user.rol]?.rank || 0) < (ROLES[pinMode]?.rank || 1)) { denied = true; user = null; }
+    } else if (pinMode === 'operador') {
+      user = { nombre: SESSION.operador || 'Operador', rol: 'operador' };
+    } else if (entered === PINS.admin) {
+      user = { nombre: 'Admin', rol: 'encargado', legacy: true };
+    }
+  } finally { _pinBusy = false; }
+
+  if (user) {
     document.getElementById('pinOverlay').style.display = 'none';
     pinBuffer = '';
     updatePinDots();
-    if (pinCallback) pinCallback();
-    pinCallback = null;
+    const cb = pinCallback; pinCallback = null;
+    if (cb) cb(user);
   } else {
-    document.getElementById('pinError').textContent = 'PIN INCORRECTO — INTENTÁ DE NUEVO';
+    document.getElementById('pinError').textContent = denied ? 'ESE USUARIO NO PUEDE AUTORIZAR ESTO' : 'PIN INCORRECTO — INTENTÁ DE NUEVO';
     pinBuffer = '';
     updatePinDots();
-    // Shake animation
-    const box = document.querySelector('.pin-box');
+    const box = document.querySelector('#pinOverlay .pin-box');
     box.style.animation = 'none';
     box.offsetHeight;
     box.style.animation = 'shake 0.4s ease';
   }
 }
+
+// ═══════════════════════════════════════════════
+// USUARIOS Y PIN POR PERSONA
+// Cada persona tiene su propio PIN de 4 dígitos y un rol:
+//  - operador:  vende
+//  - encargado: además anula ventas, registra retiros, ajusta stock,
+//               guarda el arqueo y ve el resumen
+// Los usuarios se guardan en Firebase (vorynq/config/usuarios) con el PIN cifrado
+// y quedan copiados en el equipo para poder ingresar sin internet.
+// Mientras no haya usuarios cargados se usa el PIN de admin anterior.
+// ═══════════════════════════════════════════════
+const ROLES = { operador: { rank: 1, label: 'Operador' }, encargado: { rank: 2, label: 'Encargado' } };
+let USERS = {};
+try { USERS = JSON.parse(localStorage.getItem('vq_users') || '{}') || {}; } catch(e) { USERS = {}; }
+
+function usersList() { return Object.values(USERS).filter(u => u && u.activo !== false); }
+function hasUsers() { return usersList().length > 0; }
+function setUsers(obj) {
+  USERS = obj || {};
+  try { localStorage.setItem('vq_users', JSON.stringify(USERS)); } catch(e) {}
+  updateSetupMode();
+}
+
+async function hashPin(pin) {
+  const txt = 'vorynq:' + pin;
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Respaldo (navegadores sin crypto.subtle)
+  let h = 5381; for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0;
+  return 'x' + h.toString(16);
+}
+
+async function findUserByPin(pin) {
+  const h = await hashPin(pin);
+  return usersList().find(u => u.pinHash === h) || null;
+}
+
+// Pantalla de ingreso: con usuarios cargados se ingresa con PIN; si no, con nombre libre
+function updateSetupMode() {
+  const withUsers = hasUsers();
+  const opRow = document.getElementById('operadorRow');
+  const hint = document.getElementById('setupPinHint');
+  if (opRow) opRow.style.display = withUsers ? 'none' : 'block';
+  if (hint) hint.style.display = withUsers ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  updateSetupMode();
+  const em = localStorage.getItem('vq_lastEmail');
+  if (em && document.getElementById('loginEmail')) document.getElementById('loginEmail').value = em;
+  const last = localStorage.getItem('vq_lastBarra');
+  const inp = document.getElementById('barraNameInput');
+  if (last && inp && !inp.value) inp.value = last;
+});
+
+function setOperator(user, nombre) {
+  SESSION.operador = user ? user.nombre : nombre;
+  SESSION.userId = user ? user.id : null;
+  SESSION.rol = user ? user.rol : 'operador';
+  const el = document.getElementById('topOperador');
+  if (el) el.textContent = '👤 ' + SESSION.operador;
+}
+
+function changeOperator() {
+  if (!cartIsEmptyOrConfirm()) return;
+  if (hasUsers()) {
+    requirePin('operador', user => {
+      setOperator(user);
+      if (window._firebaseReady && fbConnected) registerBarraPresence();
+      showToast('✓ OPERADOR: ' + user.nombre.toUpperCase(), 'green');
+    }, 'CAMBIO DE TURNO', 'Ingresá el PIN de quien toma la barra');
+  } else {
+    const nombre = prompt('Nombre del nuevo operador:', '');
+    if (nombre && nombre.trim()) {
+      setOperator(null, nombre.trim());
+      if (window._firebaseReady && fbConnected) registerBarraPresence();
+    }
+  }
+}
+function cartIsEmptyOrConfirm() {
+  return !cart.length || confirm('Hay un pedido cargado sin cobrar. ¿Cambiar de operador igual?');
+}
+
+// ── Administración de usuarios (dentro de ⚙, requiere usuario y contraseña) ──
+function usersAdminHTML() {
+  const list = Object.values(USERS).filter(Boolean).sort((a, b) => (ROLES[b.rol]?.rank || 0) - (ROLES[a.rol]?.rank || 0) || a.nombre.localeCompare(b.nombre));
+  const rows = list.map(u => `
+    <div class="prod-row" style="gap:10px;${u.activo === false ? 'opacity:0.5;' : ''}">
+      <div style="flex:1;">
+        <div class="prod-row-name">${escHtml(u.nombre)}</div>
+        <div class="prod-row-meta">${ROLES[u.rol]?.label || u.rol}${u.activo === false ? ' · DESACTIVADO' : ''}</div>
+      </div>
+      <select class="pf-input" style="width:auto;padding:6px 8px;font-size:11px;" onchange="setUserRole('${u.id}', this.value)">
+        ${Object.entries(ROLES).map(([k, r]) => `<option value="${k}" ${u.rol === k ? 'selected' : ''}>${r.label}</option>`).join('')}
+      </select>
+      <button class="panel-btn secondary" style="padding:6px 10px;font-size:9px;" onclick="resetUserPin('${u.id}')">🔑 PIN</button>
+      <button class="panel-btn secondary" style="padding:6px 10px;font-size:9px;" onclick="toggleUser('${u.id}')">${u.activo === false ? 'ACTIVAR' : 'DESACTIVAR'}</button>
+      <button class="panel-btn red" style="padding:6px 10px;" onclick="deleteUser('${u.id}')">✕</button>
+    </div>`).join('');
+  return `
+      <div class="panel-section">
+        <div class="panel-section-title">Usuarios y PIN por persona</div>
+        <div style="font-size:12px;color:var(--gray-light);margin-bottom:12px;line-height:1.5;">
+          <b>Operador:</b> vende. <b>Encargado:</b> además anula ventas, registra retiros, ajusta stock, guarda el arqueo y ve el resumen.
+          ${hasUsers() ? '' : '<br><span style="color:var(--orange);">Todavía no hay usuarios: mientras tanto se ingresa con nombre libre y las autorizaciones usan el PIN de admin anterior.</span>'}
+        </div>
+        ${rows || ''}
+        <div class="pf-grid" style="margin-top:12px;">
+          <div><label class="pf-label">Nombre</label><input class="pf-input" id="nuName" placeholder="Ej: Facu"></div>
+          <div><label class="pf-label">Rol</label><select class="pf-input" id="nuRol">${Object.entries(ROLES).map(([k, r]) => `<option value="${k}">${r.label}</option>`).join('')}</select></div>
+          <div><label class="pf-label">PIN (4 números)</label><input class="pf-input" id="nuPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+          <div><label class="pf-label">Repetir PIN</label><input class="pf-input" id="nuPin2" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+        </div>
+        <button class="panel-btn green" onclick="addUser()">+ AGREGAR USUARIO</button>
+      </div>`;
+}
+
+function escHtml(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+async function pinIsFree(pin, exceptId) {
+  const h = await hashPin(pin);
+  return !Object.values(USERS).some(u => u && u.id !== exceptId && u.pinHash === h);
+}
+
+function saveUser(u) {
+  USERS[u.id] = u;
+  setUsers(USERS);
+  queueWrite({ kind: 'update', path: 'vorynq/config/usuarios', value: { [u.id]: u } });
+}
+
+async function addUser() {
+  const nombre = document.getElementById('nuName').value.trim();
+  const rol = document.getElementById('nuRol').value;
+  const pin = document.getElementById('nuPin').value.trim();
+  const pin2 = document.getElementById('nuPin2').value.trim();
+  if (!nombre) { showToast('⚠ ESCRIBÍ EL NOMBRE', 'red'); return; }
+  if (!/^\d{4}$/.test(pin)) { showToast('⚠ EL PIN TIENE QUE SER DE 4 NÚMEROS', 'red'); return; }
+  if (pin !== pin2) { showToast('⚠ LOS PIN NO COINCIDEN', 'red'); return; }
+  if (!(await pinIsFree(pin))) { showToast('⚠ ESE PIN YA LO USA OTRA PERSONA', 'red'); return; }
+  const u = { id: 'u' + newId().replace(/[^a-z0-9]/gi, ''), nombre, rol, pinHash: await hashPin(pin), activo: true, creado: new Date().toISOString() };
+  saveUser(u);
+  showToast('✓ USUARIO ' + nombre.toUpperCase() + ' CREADO', 'green');
+  renderAdminPanel(document.getElementById('panelContent'));
+}
+
+async function resetUserPin(id) {
+  const u = USERS[id]; if (!u) return;
+  const pin = prompt('Nuevo PIN de 4 números para ' + u.nombre + ':', '');
+  if (pin === null) return;
+  if (!/^\d{4}$/.test(pin.trim())) { showToast('⚠ EL PIN TIENE QUE SER DE 4 NÚMEROS', 'red'); return; }
+  if (!(await pinIsFree(pin.trim(), id))) { showToast('⚠ ESE PIN YA LO USA OTRA PERSONA', 'red'); return; }
+  saveUser({ ...u, pinHash: await hashPin(pin.trim()) });
+  showToast('✓ PIN DE ' + u.nombre.toUpperCase() + ' CAMBIADO', 'green');
+}
+
+function setUserRole(id, rol) {
+  const u = USERS[id]; if (!u || !ROLES[rol]) return;
+  saveUser({ ...u, rol });
+  showToast('✓ ' + u.nombre.toUpperCase() + ' AHORA ES ' + ROLES[rol].label.toUpperCase(), 'green');
+  renderAdminPanel(document.getElementById('panelContent'));
+}
+
+function toggleUser(id) {
+  const u = USERS[id]; if (!u) return;
+  saveUser({ ...u, activo: u.activo === false });
+  renderAdminPanel(document.getElementById('panelContent'));
+}
+
+function deleteUser(id) {
+  const u = USERS[id]; if (!u) return;
+  if (!confirm('¿Eliminar a ' + u.nombre + '? Sus ventas quedan registradas.')) return;
+  delete USERS[id];
+  setUsers(USERS);
+  queueWrite({ kind: 'update', path: 'vorynq/config/usuarios', value: { [id]: null } });
+  renderAdminPanel(document.getElementById('panelContent'));
+}
+
+// ═══════════════════════════════════════════════
+// USUARIO Y CONTRASEÑA (Firebase Authentication)
+// La sección ⚙ Administración pide email y contraseña.
+// La sesión dura solo mientras está abierta Administración: al cerrarla, se cierra sola.
+// ═══════════════════════════════════════════════
+let _adminCb = null;
+function isAdminLogged() { return !!window._authUser; }
+
+function requireAdminLogin(cb, motivo) {
+  if (isAdminLogged()) { cb(); return; }
+  if (!window._authReady) {
+    showToast('⚠ PARA ESTO HACE FALTA INTERNET (INICIO DE SESIÓN)', 'red');
+    return;
+  }
+  _adminCb = cb;
+  document.getElementById('loginMotivo').textContent = motivo || 'Administración';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById(document.getElementById('loginEmail').value ? 'loginPass' : 'loginEmail').focus(), 50);
+}
+
+function cancelAdminLogin() {
+  _adminCb = null;
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
+async function doAdminLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  if (!email || !pass) { err.textContent = 'COMPLETÁ EMAIL Y CONTRASEÑA'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'INGRESANDO…';
+  try {
+    await window._signIn(email, pass);
+    try { localStorage.setItem('vq_lastEmail', email); } catch(e) {}
+    document.getElementById('loginOverlay').style.display = 'none';
+    const cb = _adminCb; _adminCb = null;
+    if (cb) cb();
+  } catch (e) {
+    const code = (e && e.code) || '';
+    err.textContent =
+      /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(code) ? 'EMAIL O CONTRASEÑA INCORRECTOS' :
+      /too-many-requests/.test(code) ? 'DEMASIADOS INTENTOS. ESPERÁ UNOS MINUTOS' :
+      /network/.test(code) ? 'SIN CONEXIÓN. REVISÁ INTERNET' :
+      /operation-not-allowed|configuration-not-found/.test(code) ? (document.getElementById('loginLegacy').style.display = 'block', 'FALTA ACTIVAR EMAIL/CONTRASEÑA EN FIREBASE (Authentication)') :
+      'NO SE PUDO INGRESAR: ' + (code || e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'INGRESAR';
+  }
+}
+
+// Solo mientras Firebase no tenga activado usuario y contraseña
+function legacyAdminLogin() {
+  const cb = _adminCb; _adminCb = null;
+  document.getElementById('loginOverlay').style.display = 'none';
+  requirePin('encargado', () => { if (cb) cb(); }, 'ACCESO ADMIN', 'PIN de administrador');
+}
+
+function adminLogout() {
+  if (isAdminLogged() && window._signOut) window._signOut().catch(() => {});
+}
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('loginOverlay');
+  if (ov && ov.style.display === 'flex') {
+    if (e.key === 'Enter') doAdminLogin();
+    if (e.key === 'Escape') cancelAdminLogin();
+  }
+});
+
 
 // Load saved PINs from localStorage
 const savedPins = JSON.parse(localStorage.getItem('vq_pins') || 'null');
@@ -994,12 +1296,18 @@ let dbRef = null;
 // ═══════════════════════════════════════════════
 function startSession() {
   const barra = document.getElementById('barraNameInput').value.trim() || 'Barra 1';
+  if (hasUsers()) {
+    requirePin('operador', user => enterSession(barra, user), 'INGRESO', 'Ingresá tu PIN personal');
+    return;
+  }
   const operador = document.getElementById('operadorInput').value.trim() || 'Operador';
-  if (!barra) { alert('Escribí el nombre de la barra'); return; }
-  if (!operador) { alert('Escribí tu nombre'); return; }
+  enterSession(barra, null, operador);
+}
 
+function enterSession(barra, user, nombre) {
   SESSION.barra = barra;
-  SESSION.operador = operador;
+  setOperator(user, nombre);
+  try { localStorage.setItem('vq_lastBarra', barra); } catch(e) {}
 
   document.getElementById('setupScreen').style.display = 'none';
   document.getElementById('topBar').style.display = 'flex';
@@ -1057,8 +1365,8 @@ function initFirebase() {
       const data = snapshot.val();
       const fbProducts = data ? Object.values(data).filter(Boolean) : [];
       if (!fbProducts.length) {
-        // Base VORYNQ vacía: traer el catálogo del sistema original (una sola vez)
-        migrateFromOriginal();
+        // Base vacía: el catálogo lo sube Administración (con sesión iniciada)
+        if (isAdminLogged()) { pushProductsToFirebase(); pushStockToFirebase(); }
         return;
       }
 
@@ -1089,6 +1397,8 @@ function initFirebase() {
       if (/^\d{4}$/.test(cfg.adminPin || '') && cfg.adminPin !== PINS.admin) { PINS.admin = cfg.adminPin; pinsChanged = true; }
       if (/^\d{4}$/.test(cfg.operadorPin || '') && cfg.operadorPin !== PINS.operador) { PINS.operador = cfg.operadorPin; pinsChanged = true; }
       if (pinsChanged) localStorage.setItem('vq_pins', JSON.stringify(PINS));
+      // Usuarios y PIN por persona (copia local para ingresar sin internet)
+      setUsers(cfg.usuarios || {});
       // Reinicio de ventas ordenado desde el panel u otra barra
       if (cfg.resetAt) applyRemoteReset(Number(cfg.resetAt));
     });
@@ -1162,6 +1472,11 @@ function sendOp(op) {
     }).catch(err => {
       inflightOps.delete(op.opId);
       console.error('Error de escritura en Firebase', err);
+      if (/permission/i.test(String((err && (err.code || err.message)) || ''))) {
+        pendingOps = pendingOps.filter(o => o.opId !== op.opId);
+        savePending();
+        showToast('⚠ SIN PERMISO PARA GUARDAR: INICIÁ SESIÓN EN ⚙ ADMINISTRACIÓN', 'red');
+      }
     });
   } catch(e) {
     inflightOps.delete(op.opId);
@@ -1277,6 +1592,11 @@ async function migrateFromOriginal() {
 
 function pushProductsToFirebase() {
   if (!window._firebaseReady) return;
+  if (!isAdminLogged()) {
+    if (!pushProductsToFirebase._warned) showToast('El orden se guardó en este equipo. Para todas las barras, ordená desde ⚙ Administración.');
+    pushProductsToFirebase._warned = true;
+    return;
+  }
   try {
     const db = window._db;
     const refFn = window._ref;
@@ -1614,6 +1934,7 @@ function processCheckout() {
     time: timeStr,
     barra: SESSION.barra,
     operador: SESSION.operador,
+    userId: SESSION.userId || null,
     items: cart.map(i => ({ ...i })),
     total,
     paymentMethod: isOrg ? 'organizador' : SESSION.paymentMethod,
@@ -1788,7 +2109,7 @@ function renderVentasPanel(el) {
     </div>
     <div class="panel-body">
       <div class="panel-section">
-        <div class="panel-section-title">${mine.length} ventas en esta barra · anular requiere PIN de admin</div>
+        <div class="panel-section-title">${mine.length} ventas en esta barra · anular requiere PIN de un encargado</div>
         ${rows || '<p style="color:var(--gray);font-family:DM Mono,monospace;font-size:11px;">Sin ventas todavía.</p>'}
       </div>
       <button class="panel-btn secondary" onclick="closePanel()">CERRAR</button>
@@ -1801,21 +2122,21 @@ function askAnnulSale(id) {
   const desc = (s.items || []).map(i => `${i.name} x${i.qty}`).join(', ');
   const monto = s.organizer ? 'consumo organizador' : '$' + (s.total || 0).toLocaleString('es-AR');
   if (!confirm(`¿Anular esta venta?\n\n${s.time} · ${desc}\n${monto}\n\nSe devuelve el stock y se descuenta del total.`)) return;
-  requirePin('admin', () => {
-    annulSale(id);
+  requirePin('encargado', user => {
+    annulSale(id, user);
     document.getElementById('panelOverlay').classList.add('open');
     renderVentasPanel(document.getElementById('panelContent'));
   });
 }
 
-function annulSale(id) {
+function annulSale(id, autoriza) {
   const s = salesLog.find(x => x.id === id);
   if (!s || s.anulada) return;
   const now = new Date();
   s.anulada = true;
   s.anuladaAt = now.toISOString();
   s.anuladaTime = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
-  s.anuladaPor = SESSION.operador;
+  s.anuladaPor = autoriza ? autoriza.nombre : SESSION.operador;
   localStorage.setItem('vq_sales', JSON.stringify(salesLog));
 
   // Devolver stock
@@ -2202,13 +2523,20 @@ function applyCarta() {
 let currentPanel = null;
 
 function openPanel(name) {
-  // Admin y Resumen requieren PIN — Stock y Retiro no
-  if (name === 'admin' || name === 'resumen') {
-    requirePin('admin', () => {
+  // Administración: usuario y contraseña. Resumen: PIN de encargado.
+  if (name === 'admin') {
+    requireAdminLogin(() => {
       currentPanel = name;
       document.getElementById('panelOverlay').classList.add('open');
-      if (name === 'admin') renderAdminPanel(document.getElementById('panelContent'));
-      else if (name === 'resumen') renderResumenPanel(document.getElementById('panelContent'));
+      renderAdminPanel(document.getElementById('panelContent'));
+    }, 'Administración');
+    return;
+  }
+  if (name === 'resumen') {
+    requirePin('encargado', () => {
+      currentPanel = name;
+      document.getElementById('panelOverlay').classList.add('open');
+      renderResumenPanel(document.getElementById('panelContent'));
     });
     return;
   }
@@ -2225,6 +2553,14 @@ function openPanel(name) {
 
 function closePanel() {
   document.getElementById('panelOverlay').classList.remove('open');
+  // Al salir de Administración se cierra la sesión (espera a que se guarden los cambios)
+  if (currentPanel === 'admin') { currentPanel = null; logoutWhenSynced(); }
+}
+function logoutWhenSynced(tries) {
+  tries = tries || 0;
+  const adminPending = pendingOps.some(o => /^vorynq\/(products|config)/.test(o.path) || (o.kind === 'set' && o.path === 'vorynq/stock'));
+  if (adminPending && fbConnected && tries < 15) { setTimeout(() => logoutWhenSynced(tries + 1), 1000); return; }
+  adminLogout();
 }
 
 function closePanelIfBg(e) {
@@ -2285,6 +2621,10 @@ function updateStock(productId, val) {
 }
 
 function saveStockFromPanel() {
+  if (!editedStockIds.length) { closePanel(); return; }
+  requirePin('encargado', () => doSaveStock(), 'AJUSTE DE STOCK', 'PIN de un encargado');
+}
+function doSaveStock() {
   saveProducts();
   pushStockToFirebase(editedStockIds);
   editedStockIds = [];
@@ -2339,12 +2679,16 @@ function registrarRetiro() {
   const nota = document.getElementById('retiroNota').value.trim();
 
   if (!nombre || !monto) { showToast('⚠ COMPLETÁ NOMBRE Y MONTO', 'red'); return; }
+  requirePin('encargado', user => doRegistrarRetiro(nombre, monto, nota, user), 'AUTORIZAR RETIRO', 'PIN de un encargado');
+}
 
+function doRegistrarRetiro(nombre, monto, nota, user) {
   const now = new Date();
   const entry = {
     id: newId(),
     barra: SESSION.barra,
     operador: SESSION.operador,
+    autorizadoPor: user ? user.nombre : '',
     nombre,
     monto,
     nota,
@@ -2362,62 +2706,129 @@ function registrarRetiro() {
   renderRetiroPanel(document.getElementById('panelContent'));
 }
 
-// ── CIERRE DE CAJA PANEL ──
-// Store cierre data globally so printCierre can access it
+// ── CIERRE DE CAJA Y ARQUEO ──
+// El arqueo compara el efectivo contado con el que debería haber:
+//   esperado = fondo inicial + ventas en efectivo − retiros
 let _cierreData = {};
+let arqueoLog = [];
+try { arqueoLog = JSON.parse(localStorage.getItem('vq_arqueos') || '[]') || []; } catch(e) { arqueoLog = []; }
+const money = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+
+function cierreTotals() {
+  const t = { efectivo: 0, mercadopago: 0, tarjeta: 0, total: 0, ventas: 0, org: 0, anuladas: 0 };
+  salesLog.filter(s => s.barra === SESSION.barra).forEach(s => {
+    if (s.anulada) { t.anuladas++; return; }
+    if (s.organizer) { t.org++; return; }
+    const m = s.paymentMethod || 'efectivo';
+    t[m in t ? m : 'efectivo'] += s.total || 0;
+    t.total += s.total || 0;
+    t.ventas++;
+  });
+  t.retiros = retiroLog.filter(r => r.barra === SESSION.barra).reduce((a, r) => a + (Number(r.monto) || 0), 0);
+  return t;
+}
+
+function lastArqueo() {
+  return arqueoLog.filter(a => a.barra === SESSION.barra).slice(-1)[0] || null;
+}
+
+function arqueoDiffHTML(diff) {
+  if (Math.abs(diff) < 1) return '<span style="color:var(--green);">✓ CUADRA</span>';
+  return diff < 0 ? `<span style="color:var(--red);">FALTAN ${money(-diff)}</span>` : `<span style="color:var(--orange);">SOBRAN ${money(diff)}</span>`;
+}
+
+function updateArqueoCalc() {
+  const t = cierreTotals();
+  const fondo = parseFloat(document.getElementById('aqFondo').value) || 0;
+  const esperado = fondo + t.efectivo - t.retiros;
+  document.getElementById('aqEsperado').textContent = money(esperado);
+  const raw = document.getElementById('aqContado').value;
+  const out = document.getElementById('aqDiff');
+  if (raw === '') { out.innerHTML = '<span style="color:var(--gray-light);">Cargá el efectivo contado</span>'; return; }
+  out.innerHTML = arqueoDiffHTML((parseFloat(raw) || 0) - esperado);
+}
+
+function saveArqueo() {
+  const t = cierreTotals();
+  const fondo = parseFloat(document.getElementById('aqFondo').value) || 0;
+  const raw = document.getElementById('aqContado').value;
+  if (raw === '') { showToast('⚠ CARGÁ EL EFECTIVO CONTADO', 'red'); return; }
+  const contado = parseFloat(raw) || 0;
+  const nota = document.getElementById('aqNota').value.trim();
+  requirePin('encargado', user => {
+    const now = new Date();
+    const esperado = fondo + t.efectivo - t.retiros;
+    const a = {
+      id: newId(), barra: SESSION.barra, cajero: SESSION.operador, autorizadoPor: user.nombre,
+      fondo, ventasEfectivo: t.efectivo, mercadopago: t.mercadopago, tarjeta: t.tarjeta, retiros: t.retiros,
+      esperado, contado, diferencia: contado - esperado, nota,
+      time: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: now.toISOString(), srvTs: now.getTime() + (window._srvOffset || 0),
+    };
+    arqueoLog.push(a);
+    try {
+      localStorage.setItem('vq_arqueos', JSON.stringify(arqueoLog));
+      localStorage.setItem('vq_fondo_' + SESSION.barra, String(fondo));
+    } catch(e) {}
+    queueWrite({ kind: 'set', path: 'vorynq/arqueos/' + a.id, value: a });
+    showToast(Math.abs(a.diferencia) < 1 ? '✓ ARQUEO GUARDADO — CUADRA' : (a.diferencia < 0 ? '⚠ ARQUEO GUARDADO — FALTAN ' : '⚠ ARQUEO GUARDADO — SOBRAN ') + money(Math.abs(a.diferencia)), Math.abs(a.diferencia) < 1 ? 'green' : 'red');
+    document.getElementById('panelOverlay').classList.add('open');
+    renderCierrePanel(document.getElementById('panelContent'));
+  }, 'AUTORIZAR ARQUEO', 'PIN de un encargado');
+}
 
 function printCierre() {
   const d = _cierreData;
+  const a = lastArqueo();
+  const row = (k, v) => '<div class="ticket-item"><span>' + k + '</span><span>' + v + '</span></div>';
   document.getElementById('printArea').innerHTML =
     '<div class="ticket-header">' +
     '<div class="ticket-logo">VORYNQ®</div>' +
     '<div class="ticket-event">CIERRE DE CAJA</div>' +
     '<div class="ticket-meta">' + d.barra + ' · ' + d.dateStr + ' · ' + d.timeStr + '</div>' +
+    '<div class="ticket-meta">Cajero: ' + SESSION.operador + '</div>' +
     '</div>' +
     '<hr class="ticket-divider">' +
-    '<div class="ticket-item"><span>TOTAL RECAUDADO</span><span>$' + d.totalGeneral.toLocaleString('es-AR') + '</span></div>' +
+    row('TOTAL RECAUDADO', money(d.t.total)) +
     '<hr class="ticket-divider">' +
-    '<div class="ticket-item"><span>Mercado Pago + Tarjeta</span><span>$' + d.mp.toLocaleString('es-AR') + '</span></div>' +
-    '<div class="ticket-item"><span>Efectivo</span><span>$' + d.efectivo.toLocaleString('es-AR') + '</span></div>' +
+    row('Efectivo', money(d.t.efectivo)) +
+    row('Mercado Pago', money(d.t.mercadopago)) +
+    row('Tarjeta', money(d.t.tarjeta)) +
+    row('Ventas', d.t.ventas) +
+    row('Consumos org.', d.t.org) +
+    (d.t.anuladas ? row('Anuladas', d.t.anuladas) : '') +
     '<hr class="ticket-divider">' +
-    '<div class="ticket-item"><span>Consumos organizadores</span><span>' + d.orgCount + '</span></div>' +
-    '<hr class="ticket-divider">' +
+    (a ? (
+      '<div class="ticket-event" style="text-align:center;">ARQUEO ' + a.time + '</div>' +
+      row('Fondo inicial', money(a.fondo)) +
+      row('+ Ventas efectivo', money(a.ventasEfectivo)) +
+      row('− Retiros', money(a.retiros)) +
+      row('= Esperado', money(a.esperado)) +
+      row('Contado', money(a.contado)) +
+      row('DIFERENCIA', (a.diferencia >= 0 ? '+' : '−') + money(Math.abs(a.diferencia))) +
+      '<div class="ticket-footer">Autorizó: ' + a.autorizadoPor + (a.nota ? '<br>' + a.nota : '') + '</div>' +
+      '<hr class="ticket-divider">'
+    ) : row('Retiros', money(d.t.retiros)) + '<div class="ticket-footer">Sin arqueo guardado</div><hr class="ticket-divider">') +
     '<div class="ticket-footer">' + d.eventName + (d.eventDate ? ' · ' + d.eventDate : '') + '</div>';
   setTimeout(() => window.print(), 100);
 }
 
 function renderCierrePanel(el) {
   const now = new Date();
-  const dateStr = now.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
-  const timeStr = now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
-
-  const totals = { efectivo: 0, mercadopago: 0 };
-  let orgCount = 0;
-  let totalGeneral = 0;
-
-  salesLog.forEach(s => {
-    if (s.anulada) return;
-    if (s.organizer) { orgCount++; return; }
-    const method = s.paymentMethod || 'efectivo';
-    if (method === 'tarjeta' || method === 'mercadopago') {
-      totals.mercadopago += s.total || 0;
-    } else {
-      totals.efectivo += s.total || 0;
-    }
-    totalGeneral += s.total || 0;
-  });
-
-  // Store for print function
-  _cierreData = {
-    barra: SESSION.barra,
-    dateStr, timeStr,
-    totalGeneral,
-    mp: totals.mercadopago,
-    efectivo: totals.efectivo,
-    orgCount,
-    eventName: SESSION.eventName,
-    eventDate: SESSION.eventDate
-  };
+  const dateStr = now.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  const t = cierreTotals();
+  _cierreData = { barra: SESSION.barra, dateStr, timeStr, t, eventName: SESSION.eventName, eventDate: SESSION.eventDate };
+  const a = lastArqueo();
+  let fondoGuardado = '';
+  try { fondoGuardado = localStorage.getItem('vq_fondo_' + SESSION.barra) || ''; } catch(e) {}
+  const box = (label, val, color, sub) => `
+    <div style="background:var(--black);border:1px solid var(--border);padding:14px 16px;">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:${color};margin-bottom:6px;">${label}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--white);">${val}</div>
+      ${sub ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);margin-top:2px;">${sub}</div>` : ''}
+    </div>`;
+  const lbl = t => `<label class="pf-label">${t}</label>`;
 
   el.innerHTML = `
     <div class="panel-header">
@@ -2425,33 +2836,38 @@ function renderCierrePanel(el) {
       <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
     <div class="panel-body">
-      <div style="text-align:center;margin-bottom:24px;">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);">${SESSION.barra} · ${dateStr} · ${timeStr}</div>
+      <div style="text-align:center;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);">${SESSION.barra} · ${dateStr} · ${timeStr} · CAJERO: ${SESSION.operador}</div>
+
+      <div style="background:rgba(0,204,102,0.1);border:1px solid rgba(0,204,102,0.3);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);">TOTAL RECAUDADO</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:3px;color:var(--green);">${money(t.total)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+        ${box('EFECTIVO', money(t.efectivo), 'var(--yellow)', 'En caja física')}
+        ${box('MERCADO PAGO', money(t.mercadopago), 'var(--blue-light)', 'En la cuenta MP')}
+        ${box('TARJETA', money(t.tarjeta), 'var(--cyan)', 'Posnet')}
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);margin-bottom:20px;">
+        ${t.ventas} ventas · ${t.org} consumos org.${t.anuladas ? ' · ' + t.anuladas + ' anuladas' : ''} · retiros ${money(t.retiros)}
       </div>
 
-      <div style="background:var(--black);border:1px solid rgba(0,204,102,0.3);padding:0;margin-bottom:16px;overflow:hidden;">
-        <div style="background:rgba(0,204,102,0.1);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gray-light);text-transform:uppercase;">TOTAL RECAUDADO</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;color:var(--green);">$${totalGeneral.toLocaleString('es-AR')}</span>
+      <div class="panel-section">
+        <div class="panel-section-title">🧮 Arqueo de efectivo</div>
+        <div class="pf-grid">
+          <div>${lbl('Fondo inicial de caja ($)')}<input class="pf-input" id="aqFondo" type="number" min="0" placeholder="0" value="${fondoGuardado}" oninput="updateArqueoCalc()"></div>
+          <div>${lbl('Efectivo contado en caja ($)')}<input class="pf-input" id="aqContado" type="number" min="0" placeholder="Contá los billetes" oninput="updateArqueoCalc()"></div>
         </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
-        <div style="background:var(--black);border:1px solid rgba(0,85,255,0.2);padding:20px;">
-          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--blue-light);margin-bottom:8px;">MERCADO PAGO + TARJETA</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--white);">$${totals.mercadopago.toLocaleString('es-AR')}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);margin-top:4px;">En tu cuenta MP</div>
+        <div style="background:var(--black);border:1px solid var(--border);padding:12px 16px;margin:4px 0 12px;font-family:'DM Mono',monospace;font-size:11px;line-height:2;">
+          <div style="display:flex;justify-content:space-between;"><span>+ Ventas en efectivo</span><span>${money(t.efectivo)}</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>− Retiros de caja</span><span>${money(t.retiros)}</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);"><span>= EFECTIVO ESPERADO (con fondo)</span><b id="aqEsperado">—</b></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;"><span>DIFERENCIA</span><b id="aqDiff">—</b></div>
         </div>
-        <div style="background:var(--black);border:1px solid rgba(255,214,0,0.2);padding:20px;">
-          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--yellow);margin-bottom:8px;">EFECTIVO</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--white);">$${totals.efectivo.toLocaleString('es-AR')}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gray-light);margin-top:4px;">En caja física</div>
-        </div>
-      </div>
-
-      <div style="background:var(--black);border:1px solid var(--border);padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);">Consumos organizadores</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--orange);">${orgCount}</span>
+        <div style="margin-bottom:12px;">${lbl('Observaciones (opcional)')}<input class="pf-input" id="aqNota" placeholder="Ej: faltante por cambio mal dado"></div>
+        <button class="panel-btn green" onclick="saveArqueo()">✓ GUARDAR ARQUEO (PIN ENCARGADO)</button>
+        ${a ? `<div style="margin-top:12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);">
+          Último arqueo ${a.time}: esperado ${money(a.esperado)} · contado ${money(a.contado)} · ${arqueoDiffHTML(a.diferencia)} · autorizó ${escHtml(a.autorizadoPor)}
+        </div>` : ''}
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -2460,7 +2876,9 @@ function renderCierrePanel(el) {
       </div>
     </div>
   `;
+  updateArqueoCalc();
 }
+
 
 // ── RESUMEN PANEL ──
 function renderResumenPanel(el) {
@@ -2577,14 +2995,16 @@ function applyRemoteReset(resetAt) {
   const before = salesLog.length + retiroLog.length;
   salesLog = salesLog.filter(after);
   retiroLog = retiroLog.filter(after);
+  arqueoLog = arqueoLog.filter(after);
+  localStorage.setItem('vq_arqueos', JSON.stringify(arqueoLog));
   totalLocal = salesLog.filter(s => !s.anulada && !s.organizer).reduce((a, s) => a + (s.total || 0), 0);
   localStorage.setItem('vq_sales', JSON.stringify(salesLog));
   localStorage.setItem('vq_retiros', JSON.stringify(retiroLog));
   localStorage.setItem('vq_total', String(totalLocal));
   // Descartar ventas/retiros/anulaciones viejas que no llegaron a subirse
-  const keepIds = new Set(salesLog.map(s => s.id).concat(retiroLog.map(r => r.id)));
+  const keepIds = new Set(salesLog.map(s => s.id).concat(retiroLog.map(r => r.id), arqueoLog.map(a => a.id)));
   pendingOps = pendingOps.filter(o => {
-    const m = /^vorynq\/(sales|retiros)\/([^/]+)/.exec(o.path);
+    const m = /^vorynq\/(sales|retiros|arqueos)\/([^/]+)/.exec(o.path);
     return !m || keepIds.has(m[2]);
   });
   savePending();
@@ -2599,7 +3019,12 @@ function applyRemoteReset(resetAt) {
 
 function resetNight() {
   if (!confirm('¿Resetear todos los datos de esta noche? Esto borrará ventas, retiros y totales en todas las barras.')) return;
-  salesLog = []; retiroLog = []; totalLocal = 0;
+  requireAdminLogin(() => { doResetNight(); logoutWhenSynced(); }, 'Resetear la noche');
+}
+
+function doResetNight() {
+  salesLog = []; retiroLog = []; totalLocal = 0; arqueoLog = [];
+  localStorage.setItem('vq_arqueos', '[]');
   pendingOps = pendingOps.filter(o => !/^vorynq\/(sales|retiros)\//.test(o.path)); savePending();
   const resetAt = Date.now() + (window._srvOffset || 0);
   localStorage.setItem('vq_lastReset', String(resetAt));
@@ -2626,6 +3051,7 @@ function resetNight() {
       window._set(refFn(db, 'vorynq/retiros'), null);
       // Clear barras list
       window._set(refFn(db, 'vorynq/barras'), null);
+      window._set(refFn(db, 'vorynq/arqueos'), null);
       showToast('✓ NOCHE RESETEADA EN TODAS LAS BARRAS', 'green');
     } catch(e) {
       showToast('✓ NOCHE RESETEADA LOCAL', 'green');
@@ -2644,6 +3070,9 @@ function renderAdminPanel(el) {
       <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
     <div class="panel-body">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray-light);margin-bottom:14px;">
+        🔐 SESIÓN: ${window._authUser ? escHtml(window._authUser.email || '') : 'MODO ANTERIOR'} · SE CIERRA AL SALIR DE ESTA PANTALLA
+      </div>
 
       <div class="panel-section">
         <div class="panel-section-title">Configuración del evento</div>
@@ -2761,20 +3190,7 @@ function renderAdminPanel(el) {
         </div>
       </div>
 
-      <div class="panel-section">
-        <div class="panel-section-title">Cambiar PINs</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <label class="pf-label">PIN Operador (entrada al sistema)</label>
-            <input class="pf-input" id="newPinOp" type="password" maxlength="4" placeholder="4 dígitos">
-          </div>
-          <div>
-            <label class="pf-label">PIN Admin (panel admin)</label>
-            <input class="pf-input" id="newPinAdmin" type="password" maxlength="4" placeholder="4 dígitos">
-          </div>
-        </div>
-        <button class="panel-btn" onclick="changePins()">GUARDAR NUEVOS PINS</button>
-      </div>
+      ${usersAdminHTML()}
 
       <div class="panel-section">
         <div class="panel-section-title">Agregar producto</div>
@@ -3152,6 +3568,9 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'Enter') pinConfirm();
     return;
   }
+  const loginOpen = document.getElementById('loginOverlay') &&
+    document.getElementById('loginOverlay').style.display === 'flex';
+  if (loginOpen) return;
   if (e.key === 'Escape') closePanel();
   if (e.key === 'Enter' && document.getElementById('mainLayout').style.display !== 'none') {
     if (!document.getElementById('panelOverlay').classList.contains('open')) {
@@ -3160,6 +3579,12 @@ document.addEventListener('keydown', e => {
     }
   }
 });
+</script>
+<script>
+// Abrir sin internet: guarda la página y sus librerías en el equipo
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e)));
+}
 </script>
 </body>
 </html>
