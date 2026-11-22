@@ -737,7 +737,7 @@ body {
       <input class="setup-input" id="operadorInput" placeholder="Tu nombre">
 
       <div class="firebase-note" id="setupConn">⏳ CONECTANDO CON EL SERVIDOR…</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.10-c</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.16-b</div>
 
       <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
     </div>
@@ -749,7 +749,7 @@ body {
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="top-logo">VQ<span>.</span></div>
     <div class="top-barra" id="topBarraName">BARRA 1</div>
-    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.10-c</div>
+    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.16-b</div>
   </div>
   <div class="top-event" id="topEventName">—</div>
   <div style="display:flex;align-items:center;gap:12px;">
@@ -1305,9 +1305,11 @@ function pushSaleToFirebase(sale) {
 function renderProducts() {
   const pane = document.getElementById('productsPane');
   pane.innerHTML = products.map(p => {
-    const oos = p.stock <= 0;
-    const low = p.stock > 0 && p.stock <= 10;
-    const critical = p.stock > 0 && p.stock <= 5;
+    const avail = availableOf(p);
+    const combo = !!p.isCombo;
+    const oos = avail <= 0;
+    const low = avail > 0 && avail <= 10;
+    const critical = avail > 0 && avail <= 5;
     return `
     <div class="product-card ${oos ? 'out-of-stock' : ''}"
       draggable="true"
@@ -1320,7 +1322,7 @@ function renderProducts() {
       ${p.isCombo ? '<div style="font-family:\'DM Mono\',monospace;font-size:8px;color:var(--cyan);letter-spacing:1px;">COMBO</div>' : ''}
       <div class="product-price">$${p.price.toLocaleString('es-AR')}</div>
       <div class="product-stock ${critical?'critical':low?'low':''}">
-        ${oos ? 'Sin stock' : `Stock: ${p.stock}`}
+        ${oos ? 'Sin stock' : combo ? `Disponibles: ${avail}` : `Stock: ${fmtQty(p.stock)}`}
       </div>
     </div>`;
   }).join('');
@@ -1396,13 +1398,69 @@ function saveProducts() {
 // ═══════════════════════════════════════════════
 // CART
 // ═══════════════════════════════════════════════
+// ── CANTIDADES FRACCIONARIAS (botellas por ml) ──
+// Un producto puede tener "contenido" (ml por unidad, ej. botella de 700 ml).
+// Un combo puede descontar ml de ese producto: 60 ml de una botella de 700 = 0,0857 botellas.
+const round4 = n => Math.round(n * 10000) / 10000;
+const fmtQty = n => {
+  const r = Math.round((Number(n) || 0) * 100) / 100;
+  return r.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+};
+function lineUnits(l) {
+  if (l.ml) {
+    const b = products.find(x => x.id === l.productId);
+    return b && b.contenido ? l.ml / b.contenido : 0;
+  }
+  return Number(l.qty) || 0;
+}
+function lineText(l) {
+  const b = products.find(x => x.id === l.productId);
+  return (b ? b.name : '?') + (l.ml ? ' ' + fmtQty(l.ml) + ' ml' : ' x' + fmtQty(l.qty));
+}
+
+// ── COMBOS ──
+// Un combo no tiene stock propio: descuenta sus componentes (productos simples).
+// Sus "disponibles" son cuántos se pueden armar con el stock actual de cada componente.
+function isRealCombo(p) { return !!(p && p.isCombo && p.comboLines && p.comboLines.length); }
+function availableOf(p) {
+  if (!p) return 0;
+  if (!isRealCombo(p)) return p.stock;
+  let min = Infinity;
+  p.comboLines.forEach(l => {
+    const b = products.find(x => x.id === l.productId);
+    const u = lineUnits(l);
+    min = Math.min(min, b && !b.isCombo && u > 0 ? Math.floor((Math.max(0, b.stock) + 1e-9) / u) : 0);
+  });
+  return min === Infinity ? 0 : min;
+}
+function comboText(p) {
+  return (p.comboLines || []).map(lineText).join(' + ');
+}
+// Devuelve el primer producto que quedaría sin stock con ese pedido (o null si alcanza)
+function stockShortage(items) {
+  const d = stockDeltasForItems(items, -1);
+  for (const [id, delta] of Object.entries(d)) {
+    const b = products.find(x => x.id === Number(id));
+    if (b && b.stock + delta < -1e-9) return b;
+  }
+  return null;
+}
+function cartWith(productId, add) {
+  const trial = cart.map(i => ({ ...i }));
+  const ex = trial.find(i => i.id === productId);
+  if (ex) ex.qty += add; else trial.push({ id: productId, qty: add });
+  return trial;
+}
+
 function addToCart(productId) {
   const p = products.find(x => x.id === productId);
-  if (!p || p.stock <= 0) return;
+  if (!p) return;
+  if (isRealCombo(p) === false && p.isCombo) { showToast('⚠ ESTE COMBO NO TIENE PRODUCTOS DEFINIDOS', 'red'); return; }
+  const short = stockShortage(cartWith(productId, 1));
+  if (short) { showToast('⚠ SIN STOCK DE ' + short.name.toUpperCase(), 'red'); return; }
 
   const existing = cart.find(x => x.id === productId);
   if (existing) {
-    if (existing.qty >= p.stock) { showToast('⚠ SIN STOCK SUFICIENTE', 'red'); return; }
     existing.qty++;
   } else {
     cart.push({ id: p.id, name: p.name, emoji: p.emoji, price: p.price, qty: 1 });
@@ -1413,6 +1471,10 @@ function addToCart(productId) {
 function changeCartQty(productId, delta) {
   const item = cart.find(x => x.id === productId);
   if (!item) return;
+  if (delta > 0) {
+    const short = stockShortage(cartWith(productId, delta));
+    if (short) { showToast('⚠ SIN STOCK DE ' + short.name.toUpperCase(), 'red'); return; }
+  }
   item.qty += delta;
   if (item.qty <= 0) cart = cart.filter(x => x.id !== productId);
   renderCart();
@@ -1514,11 +1576,12 @@ function stockDeltasForItems(items, sign) {
   items.forEach(item => {
     const p = products.find(x => x.id === item.id);
     if (p && p.isCombo && p.comboLines && p.comboLines.length) {
-      p.comboLines.forEach(line => add(line.productId, line.qty * item.qty));
+      p.comboLines.forEach(line => add(line.productId, lineUnits(line) * item.qty));
     } else if (p) {
       add(p.id, item.qty);
     }
   });
+  Object.keys(deltas).forEach(k => { deltas[k] = round4(deltas[k]); });
   return deltas;
 }
 
@@ -1538,7 +1601,7 @@ function processCheckout() {
   const deltas = stockDeltasForItems(cart, -1);
   Object.entries(deltas).forEach(([id, d]) => {
     const p = products.find(x => x.id === Number(id));
-    if (p) p.stock = Math.max(0, p.stock + d);
+    if (p) p.stock = round4(Math.max(0, p.stock + d));
   });
   changeStockInFirebase(deltas);
   saveProducts();
@@ -1595,10 +1658,20 @@ function expandSaleToUnits(sale) {
   sale.items.forEach(item => {
     const p = products.find(x => x.id === item.id);
     if (p && p.isCombo && p.comboLines && p.comboLines.length) {
+      // Trago preparado (usa ml o fracciones de algún producto): 1 ticket por trago con su nombre.
+      // Combo de unidades enteras (ej. botella + 4 latas): 1 ticket por cada unidad.
+      const isMixed = p.comboLines.some(l => l.ml || !Number.isInteger(Number(l.qty)));
+      if (isMixed) {
+        for (let c = 0; c < item.qty; c++) units.push({ emoji: item.emoji, name: item.name, price: null, comboLabel: comboText(p) });
+        return;
+      }
       for (let c = 0; c < item.qty; c++) {
+        const before = units.length;
         p.comboLines.forEach(line => {
           const base = products.find(x => x.id === line.productId);
-          for (let u = 0; u < line.qty; u++) {
+          // Porciones (ml o fracciones) no llevan ticket propio
+          const whole = line.ml ? 0 : Math.floor(Number(line.qty) || 0);
+          for (let u = 0; u < whole; u++) {
             units.push({
               emoji: base ? base.emoji : item.emoji,
               name: base ? base.name : item.name,
@@ -1607,6 +1680,7 @@ function expandSaleToUnits(sale) {
             });
           }
         });
+        if (units.length === before) units.push({ emoji: item.emoji, name: item.name, price: null, comboLabel: comboText(p) });
       }
     } else {
       for (let u = 0; u < item.qty; u++) {
@@ -1671,7 +1745,7 @@ function checkLowStock(silent) {
   } else {
     low.sort((a, b) => a.stock - b.stock);
     bar.innerHTML = '⚠ STOCK BAJO: ' + low.map(p =>
-      p.stock <= 0 ? `<span class="out">${p.name} (AGOTADO)</span>` : `<b>${p.name}</b> (${p.stock})`
+      p.stock <= 0 ? `<span class="out">${p.name} (AGOTADO)</span>` : `<b>${p.name}</b> (${fmtQty(p.stock)})`
     ).join(' · ');
     bar.title = bar.textContent;
     bar.classList.add('show');
@@ -1683,7 +1757,7 @@ function checkLowStock(silent) {
     const nuevos = low.filter(p => !_lowNotified[p.id]);
     if (nuevos.length) {
       const p = nuevos[0];
-      showToast(p.stock <= 0 ? `⚠ ${p.name.toUpperCase()} AGOTADO` : `⚠ STOCK BAJO: ${p.name.toUpperCase()} (${p.stock})`, 'red');
+      showToast(p.stock <= 0 ? `⚠ ${p.name.toUpperCase()} AGOTADO` : `⚠ STOCK BAJO: ${p.name.toUpperCase()} (${fmtQty(p.stock)})`, 'red');
     }
   }
   _lowNotified = nowLow;
@@ -1748,7 +1822,7 @@ function annulSale(id) {
   const deltas = stockDeltasForItems(s.items || [], +1);
   Object.entries(deltas).forEach(([pid, d]) => {
     const p = products.find(x => x.id === Number(pid));
-    if (p) p.stock += d;
+    if (p) p.stock = round4(p.stock + d);
   });
   changeStockInFirebase(deltas);
   saveProducts();
@@ -1821,19 +1895,43 @@ function parsePrice(v) {
 }
 function parseStock(v) {
   if (v === undefined || v === null || String(v).trim() === '') return null;
-  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'));
-  return isNaN(n) ? NaN : Math.max(0, Math.round(n));
+  let n;
+  if (typeof v === 'number') n = v;
+  else {
+    let t = String(v).replace(/\s/g, '');
+    if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');      // 1.200,5 / 9,5
+    else if (/\.\d{3}$/.test(t)) t = t.replace(/\./g, '');                // 1.200
+    n = parseFloat(t);
+  }
+  return isNaN(n) ? NaN : Math.max(0, round4(n));
+}
+
+// "Red Bull x4 + Jagger x1"  /  "4 Red Bull; 1 Jagger"  →  [{name, qty}]
+function parseComboText(t) {
+  const num = x => parseFloat(String(x).replace(',', '.'));
+  return String(t).split(/\s*[+;]\s*/).map(part => part.trim()).filter(Boolean).map(part => {
+    let m = part.match(/^(.*?)\s+(\d+(?:[.,]\d+)?)\s*ml$/i);                 // Jagger 60 ml
+    if (m && m[1].trim()) return { name: m[1].trim(), ml: num(m[2]) };
+    m = part.match(/^(\d+(?:[.,]\d+)?)\s*ml\s+(?:de\s+)?(.+)$/i);             // 60 ml Jagger
+    if (m) return { name: m[2].trim(), ml: num(m[1]) };
+    m = part.match(/^(.*?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)$/i);                   // Red Bull x2
+    if (m && m[1].trim()) return { name: m[1].trim(), qty: num(m[2]) };
+    m = part.match(/^(\d+(?:[.,]\d+)?)\s*[x×*]?\s+(.+)$/i);                   // 2 Red Bull
+    if (m) return { name: m[2].trim(), qty: num(m[1]) };
+    return { name: part, qty: 1 };
+  }).filter(c => c.name && ((c.qty > 0) || (c.ml > 0)));
 }
 
 async function downloadCartaTemplate() {
   try {
     const XLSX = await loadSheetJS();
-    const base = products.filter(p => !p.isCombo);
-    const rows = [['Producto', 'Precio', 'Stock', 'Emoji (opcional)']];
-    if (base.length) base.forEach(p => rows.push([p.name, p.price, p.stock, p.emoji]));
-    else rows.push(['Cerveza lata', 3000, 120, '🍺'], ['Fernet con coca', 5000, 80, '🥃'], ['Agua', 1500, 100, '💧']);
+    const rows = [['Producto', 'Precio', 'Stock', 'Emoji (opcional)', 'Contenido (ml)', 'Descuenta (solo combos)']];
+    if (products.length) {
+      products.filter(p => !p.isCombo).forEach(p => rows.push([p.name, p.price, round4(p.stock), p.emoji, p.contenido || '', '']));
+      products.filter(p => p.isCombo).forEach(p => rows.push([p.name, p.price, '', p.emoji, '', comboText(p)]));
+    } else rows.push(['Botella Jagger', 90000, 10, '🍾', 700, ''], ['Lata Red Bull', 4000, 200, '⚡', '', ''], ['Trago Jagger + Red Bull', 9000, '', '🥃', '', 'Botella Jagger 60 ml + Lata Red Bull x1'], ['Jagger Bomb x2 Red Bull', 15000, '', '🎉', '', 'Botella Jagger 60 ml + Lata Red Bull x2']);
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
+    ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 44 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Carta');
     XLSX.writeFile(wb, 'carta-vorynq.xlsx');
@@ -1864,6 +1962,8 @@ async function readCartaFile(input) {
         else if (c.price === undefined && /^(precio|valor|importe|\$)/.test(n)) c.price = i;
         else if (c.stock === undefined && /^(stock|cantidad|unidades|cant)/.test(n)) c.stock = i;
         else if (c.emoji === undefined && /^(emoji|icono)/.test(n)) c.emoji = i;
+        else if (c.combo === undefined && /^(descuenta|combo|composicion|compone|incluye)/.test(n)) c.combo = i;
+        else if (c.cont === undefined && /^(contenido|ml\b|volumen|capacidad)/.test(n)) c.cont = i;
       });
       if (c.name !== undefined && c.price !== undefined) { hRow = r; col = c; }
     }
@@ -1880,14 +1980,18 @@ async function readCartaFile(input) {
       const price = parsePrice(rawPrice);
       const stock = col.stock !== undefined ? parseStock(line[col.stock]) : null;
       const emoji = col.emoji !== undefined ? String(line[col.emoji] ?? '').trim() : '';
+      const comboRaw = col.combo !== undefined ? String(line[col.combo] ?? '').trim() : '';
+      const contenido = col.cont !== undefined ? (parseInt(String(line[col.cont] ?? '').replace(/\D/g, '')) || null) : null;
+      const combo = comboRaw ? parseComboText(comboRaw) : null;
       let error = '';
       if (!name) error = 'Falta el nombre';
       else if (isNaN(price) || price <= 0) error = 'Precio inválido';
-      else if (Number.isNaN(stock)) error = 'Stock inválido';
+      else if (!combo && Number.isNaN(stock)) error = 'Stock inválido';
+      else if (comboRaw && !combo.length) error = 'No se entiende qué descuenta el combo';
       const key = normTxt(name);
       if (!error && seen[key] !== undefined) rows[seen[key]].error = 'Repetido (se usa la última fila)';
       if (!error) seen[key] = rows.length;
-      rows.push({ fila: r + 1, name, price, stock, emoji, error });
+      rows.push({ fila: r + 1, name, price, stock: combo ? null : stock, emoji, combo, contenido: combo ? null : contenido, error });
     }
     if (!rows.length) { showToast('⚠ EL ARCHIVO NO TIENE PRODUCTOS', 'red'); return; }
     _cartaPreview = { file: file.name, rows, mode: 'merge' };
@@ -1900,13 +2004,36 @@ async function readCartaFile(input) {
 
 // Calcula qué va a pasar con cada producto según el modo elegido
 function planCarta(mode) {
-  const valid = _cartaPreview.rows.filter(r => !r.error);
   const byName = {};
   products.forEach(p => { byName[normTxt(p.name)] = p; });
+  // Componentes posibles: productos simples del Excel + (en "actualizar") los simples que ya existen
+  const simpleNames = new Set(_cartaPreview.rows.filter(r => !r.error && !r.combo).map(r => normTxt(r.name)));
+  if (mode !== 'replace') products.filter(p => !p.isCombo).forEach(p => simpleNames.add(normTxt(p.name)));
+  const contOf = {};
+  products.filter(p => !p.isCombo && p.contenido).forEach(p => { contOf[normTxt(p.name)] = p.contenido; });
+  _cartaPreview.rows.filter(r => !r.error && !r.combo && r.contenido).forEach(r => { contOf[normTxt(r.name)] = r.contenido; });
+  _cartaPreview.rows.forEach(r => {
+    if (r.comboErr) { r.error = ''; r.comboErr = false; }
+    if (!r.error && r.combo) {
+      const miss = r.combo.find(c => !simpleNames.has(normTxt(c.name)) || normTxt(c.name) === normTxt(r.name));
+      const noCont = r.combo.find(c => c.ml && !contOf[normTxt(c.name)]);
+      if (miss) { r.error = `El combo descuenta "${miss.name}", que no está en la carta`; r.comboErr = true; }
+      else if (noCont) { r.error = `Para descontar ml de "${noCont.name}" falta su contenido (ml) en la columna Contenido`; r.comboErr = true; }
+    }
+  });
+  const valid = _cartaPreview.rows.filter(r => !r.error);
   const plan = valid.map(r => {
     const ex = byName[normTxt(r.name)];
     if (!ex) return { ...r, status: 'nuevo' };
     const changes = [];
+    if (r.combo) {
+      const nuevo = r.combo.map(c => normTxt(c.name) + (c.ml ? 'ml' + c.ml : 'x' + c.qty)).sort().join('|');
+      const actual = ex.isCombo ? (ex.comboLines || []).map(l => { const b = products.find(x => x.id === l.productId); return (b ? normTxt(b.name) : '?') + (l.ml ? 'ml' + l.ml : 'x' + l.qty); }).sort().join('|') : '';
+      if (nuevo !== actual) changes.push('combo: ' + r.combo.map(c => c.name + (c.ml ? ' ' + c.ml + ' ml' : ' x' + c.qty)).join(' + '));
+    }
+    if (r.contenido && !ex.isCombo && r.contenido !== ex.contenido) {
+      changes.push('contenido ' + r.contenido + ' ml');
+    }
     if (ex.price !== r.price) changes.push(`precio $${ex.price.toLocaleString('es-AR')} → $${r.price.toLocaleString('es-AR')}`);
     if (r.stock !== null && !ex.isCombo && ex.stock !== r.stock) changes.push(`stock ${ex.stock} → ${r.stock}`);
     if (r.emoji && r.emoji !== ex.emoji) changes.push('emoji');
@@ -1929,16 +2056,17 @@ function renderCartaPreview() {
   const { plan, removed } = planCarta(P.mode);
   const errors = P.rows.filter(r => r.error);
   const cnt = s => plan.filter(x => x.status === s).length;
-  const sinStock = plan.filter(x => x.status === 'nuevo' && !x.stock).length;
+  const sinStock = plan.filter(x => x.status === 'nuevo' && !x.combo && !x.stock).length;
   const badge = (txt, color) => `<span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:${color};">${txt}</span>`;
   const rowsHTML = plan.map(x => {
     let st;
-    if (x.status === 'nuevo') st = badge('NUEVO' + (!x.stock ? ' · SIN STOCK' : ''), x.stock ? 'var(--green)' : 'var(--orange)');
+    if (x.status === 'nuevo' && x.combo) st = badge('NUEVO COMBO · ' + x.combo.map(c => c.name + (c.ml ? ' ' + c.ml + ' ml' : ' x' + c.qty)).join(' + ').toUpperCase(), 'var(--green)');
+    else if (x.status === 'nuevo') st = badge('NUEVO' + (!x.stock ? ' · SIN STOCK' : ''), x.stock ? 'var(--green)' : 'var(--orange)');
     else if (x.status === 'cambia') st = badge(x.changes.join(' · ').toUpperCase(), 'var(--cyan)');
     else st = badge('SIN CAMBIOS', 'var(--gray-light)');
     const emoji = x.emoji || (x.existing ? x.existing.emoji : guessEmoji(x.name));
     const stock = x.stock !== null ? x.stock : (x.existing ? x.existing.stock : 0);
-    return `<tr><td>${emoji} ${x.name}</td><td>$${x.price.toLocaleString('es-AR')}</td><td>${x.existing && x.existing.isCombo ? '—' : stock}</td><td>${st}</td></tr>`;
+    return `<tr><td>${emoji} ${x.name}</td><td>$${x.price.toLocaleString('es-AR')}</td><td>${x.combo || (x.existing && x.existing.isCombo) ? 'combo' : stock}</td><td>${st}</td></tr>`;
   }).join('');
   const errHTML = errors.map(r => `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-bottom:4px;">Fila ${r.fila}: ${r.name || '(sin nombre)'} — ${r.error}</div>`).join('');
   const remHTML = removed.map(p => `${p.emoji} ${p.name}`).join(' · ');
@@ -1992,24 +2120,45 @@ function applyCarta() {
   const removedIds = new Set(removed.map(p => p.id));
   let next = products.filter(p => !removedIds.has(p.id));
   // Combos que usan un producto eliminado también se quitan
-  next = next.filter(p => !(p.isCombo && (p.comboLines || []).some(l => removedIds.has(l.productId))));
+  const inFileNames = new Set(plan.map(x => normTxt(x.name)));
+  next = next.filter(p => !(p.isCombo && !inFileNames.has(normTxt(p.name)) && (p.comboLines || []).some(l => removedIds.has(l.productId))));
 
   const stockChanged = [];
   let idBase = Date.now();
-  plan.forEach((x, i) => {
+  // Primero los productos simples, después los combos (que necesitan los ids de sus componentes)
+  const work = [...plan].sort((a, b) => (a.combo ? 1 : 0) - (b.combo ? 1 : 0));
+  const resolveLines = combo => combo.map(c => {
+    const b = next.find(q => !q.isCombo && normTxt(q.name) === normTxt(c.name));
+    return b ? (c.ml ? { productId: b.id, ml: c.ml } : { productId: b.id, qty: c.qty }) : null;
+  }).filter(Boolean);
+  work.forEach((x, i) => {
+    if (x.combo) {
+      const lines = resolveLines(x.combo);
+      if (x.existing) {
+        const p = next.find(q => q.id === x.existing.id);
+        if (!p) return;
+        Object.assign(p, { price: x.price, name: x.name, isCombo: true, comboLines: lines, stock: 9999, initialStock: 9999 });
+        if (x.emoji) p.emoji = x.emoji;
+      } else {
+        next.push({ id: idBase + i, name: x.name, emoji: x.emoji || guessEmoji(x.name), price: x.price,
+          stock: 9999, initialStock: 9999, isCombo: true, comboLines: lines });
+      }
+      return;
+    }
     if (x.existing) {
       const p = next.find(q => q.id === x.existing.id);
       if (!p) return;
       p.price = x.price;
       p.name = x.name;
       if (x.emoji) p.emoji = x.emoji;
+      if (x.contenido && !p.isCombo) p.contenido = x.contenido;
       if (x.stock !== null && !p.isCombo && p.stock !== x.stock) {
         p.stock = x.stock; p.initialStock = x.stock; stockChanged.push(p.id);
       }
     } else {
       const st = x.stock !== null ? x.stock : 0;
       next.push({ id: idBase + i, name: x.name, emoji: x.emoji || guessEmoji(x.name), price: x.price,
-        stock: st, initialStock: st, isCombo: false, comboLines: [] });
+        stock: st, initialStock: st, isCombo: false, comboLines: [], ...(x.contenido ? { contenido: x.contenido } : {}) });
       stockChanged.push(idBase + i);
     }
   });
@@ -2103,14 +2252,14 @@ function renderStockPanel(el) {
             </tr>
           </thead>
           <tbody>
-            ${products.map(p => `
+            ${products.filter(p => !p.isCombo).map(p => `
               <tr>
                 <td>${p.emoji} ${p.name}</td>
-                <td>${p.initialStock}</td>
-                <td><strong>${p.stock}</strong></td>
-                <td>${p.initialStock - p.stock}</td>
+                <td>${fmtQty(p.initialStock)}${p.contenido ? ' <span style="color:var(--gray-light);font-size:10px;">× ' + p.contenido + ' ml</span>' : ''}</td>
+                <td><strong>${fmtQty(p.stock)}</strong></td>
+                <td>${fmtQty(p.initialStock - p.stock)}</td>
                 <td>
-                  <input class="stock-input" type="number" value="${p.stock}"
+                  <input class="stock-input" type="number" step="any" value="${round4(p.stock)}"
                     onchange="updateStock(${p.id}, this.value)">
                 </td>
               </tr>
@@ -2130,7 +2279,7 @@ let editedStockIds = [];
 function updateStock(productId, val) {
   const p = products.find(x => x.id === productId);
   if (p) {
-    p.stock = Math.max(0, parseInt(val) || 0);
+    p.stock = round4(Math.max(0, parseFloat(String(val).replace(',', '.')) || 0));
     if (!editedStockIds.includes(productId)) editedStockIds.push(productId);
   }
 }
@@ -2390,12 +2539,12 @@ function renderResumenPanel(el) {
             <tr><th>Producto</th><th>Inicial</th><th>Vendidos</th><th>Final</th></tr>
           </thead>
           <tbody>
-            ${products.map(p => `
+            ${products.filter(p => !p.isCombo).map(p => `
               <tr>
                 <td>${p.emoji} ${p.name}</td>
                 <td>${p.initialStock}</td>
-                <td>${p.initialStock - p.stock}</td>
-                <td><strong>${p.stock}</strong></td>
+                <td>${fmtQty(p.initialStock - p.stock)}</td>
+                <td><strong>${fmtQty(p.stock)}</strong></td>
               </tr>
             `).join('')}
           </tbody>
@@ -2546,7 +2695,7 @@ function renderAdminPanel(el) {
                 <div style="flex:1;">
                   <div class="prod-row-name">${p.name}</div>
                   <div class="prod-row-meta">
-                    $${p.price.toLocaleString('es-AR')} · ${p.isCombo ? 'COMBO · Descuenta: ' + (p.comboLines||[]).map(l => { const base = products.find(x=>x.id===l.productId); return (base?base.name:'?')+' x'+l.qty; }).join(' + ') : 'Stock: '+p.stock+'/'+p.initialStock}
+                    $${p.price.toLocaleString('es-AR')} · ${p.isCombo ? 'COMBO · Descuenta: ' + comboText(p) : 'Stock: '+fmtQty(p.stock)+'/'+fmtQty(p.initialStock) + (p.contenido ? ' · ' + p.contenido + ' ml c/u' : '')}
                   </div>
                 </div>
                 <button class="panel-btn secondary" onclick="toggleEditProduct(${p.id})" style="padding:6px 14px;font-size:9px;">✏ EDITAR</button>
@@ -2588,11 +2737,20 @@ function renderAdminPanel(el) {
                     <label class="pf-label">Precio ($)</label>
                     <input class="pf-input" id="ep-price-${p.id}" type="number" value="${p.price}" placeholder="0">
                   </div>
-                  <div>
+                  ${p.isCombo ? '' : `<div>
                     <label class="pf-label">Stock inicial</label>
-                    <input class="pf-input" id="ep-stock-${p.id}" type="number" value="${p.initialStock}" placeholder="0">
+                    <input class="pf-input" id="ep-stock-${p.id}" type="number" step="any" value="${round4(p.initialStock)}" placeholder="0">
                   </div>
+                  <div>
+                    <label class="pf-label">Contenido por unidad en ml (opcional)</label>
+                    <input class="pf-input" id="ep-cont-${p.id}" type="number" value="${p.contenido || ''}" placeholder="Ej: botella 700">
+                  </div>`}
                 </div>
+                ${p.isCombo ? `<div style="margin-bottom:10px;padding:10px;background:rgba(0,221,255,0.06);border:1px solid rgba(0,221,255,0.15);">
+                  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--cyan);letter-spacing:1px;margin-bottom:8px;">ESTE COMBO DESCUENTA DEL STOCK:</div>
+                  <div id="comboLinesE${p.id}"></div>
+                  <button class="panel-btn secondary" onclick="addComboLine('E${p.id}')" style="padding:5px 12px;font-size:9px;margin-top:6px;">+ AGREGAR PRODUCTO AL COMBO</button>
+                </div>` : ''}
                 <div style="display:flex;gap:8px;">
                   <button class="panel-btn green" onclick="saveEditProduct(${p.id})">✓ GUARDAR CAMBIOS</button>
                   <button class="panel-btn secondary" onclick="toggleEditProduct(${p.id})">CANCELAR</button>
@@ -2657,7 +2815,11 @@ function renderAdminPanel(el) {
           </div>
           <div>
             <label class="pf-label">Stock inicial (unidades)</label>
-            <input class="pf-input" id="npStock" type="number" placeholder="100">
+            <input class="pf-input" id="npStock" type="number" step="any" placeholder="100">
+          </div>
+          <div>
+            <label class="pf-label">Contenido por unidad en ml (opcional)</label>
+            <input class="pf-input" id="npCont" type="number" placeholder="Ej: botella 700">
           </div>
         </div>
 
@@ -2733,11 +2895,14 @@ function toggleComboForm() {
   }
 }
 
-function addComboLine(suffix) {
+function addComboLine(suffix, preset) {
   const container = document.getElementById('comboLines' + suffix);
   if (!container) return;
   const idx = container.children.length;
-  const opts = products.map(p => `<option value="${p.id}">${p.emoji} ${p.name}</option>`).join('');
+  // Solo productos simples como componentes (un combo no puede contener otro combo)
+  const selfId = String(suffix).startsWith('E') ? Number(String(suffix).slice(1)) : null;
+  const opts = products.filter(p => !p.isCombo && p.id !== selfId)
+    .map(p => `<option value="${p.id}" ${preset && preset.productId === p.id ? 'selected' : ''}>${p.emoji} ${p.name}</option>`).join('');
   const line = document.createElement('div');
   line.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
   line.innerHTML = `
@@ -2745,8 +2910,12 @@ function addComboLine(suffix) {
       <option value="">-- Producto base --</option>
       ${opts}
     </select>
-    <input class="pf-input combo-qty-input" type="number" min="1" value="1"
-      style="width:65px;padding:6px 8px;font-size:13px;" placeholder="Cant.">
+    <input class="pf-input combo-qty-input" type="number" min="0" step="any" value="${preset ? (preset.ml || preset.qty) : 1}"
+      style="width:75px;padding:6px 8px;font-size:13px;" placeholder="Cant.">
+    <select class="pf-input combo-unit-select" style="width:80px;padding:6px 8px;font-size:12px;">
+      <option value="u" ${preset && preset.ml ? '' : 'selected'}>unid.</option>
+      <option value="ml" ${preset && preset.ml ? 'selected' : ''}>ml</option>
+    </select>
     <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
   `;
   container.appendChild(line);
@@ -2760,8 +2929,17 @@ function getComboLines(suffix) {
   Array.from(container.children).forEach(line => {
     const sel = line.querySelector('.combo-product-select');
     const qty = line.querySelector('.combo-qty-input');
-    if (sel && sel.value && qty && parseInt(qty.value) > 0) {
-      lines.push({ productId: parseInt(sel.value), qty: parseInt(qty.value) || 1 });
+    const unit = line.querySelector('.combo-unit-select');
+    const val = qty ? parseFloat(String(qty.value).replace(',', '.')) : 0;
+    if (sel && sel.value && val > 0) {
+      const productId = parseInt(sel.value);
+      if (unit && unit.value === 'ml') {
+        const b = products.find(x => x.id === productId);
+        if (!b || !b.contenido) { lines.invalid = (b ? b.name : 'el producto'); return; }
+        lines.push({ productId, ml: val });
+      } else {
+        lines.push({ productId, qty: round4(val) });
+      }
     }
   });
   return lines;
@@ -2771,15 +2949,18 @@ function addProduct() {
   const name = document.getElementById('npName').value.trim();
   const emoji = document.getElementById('npEmoji').value.trim() || '📦';
   const price = parseInt(document.getElementById('npPrice').value) || 0;
-  const stock = parseInt(document.getElementById('npStock').value) || 0;
+  const stock = round4(parseFloat(document.getElementById('npStock').value) || 0);
+  const contenido = parseInt(document.getElementById('npCont').value) || 0;
   const isCombo = _isComboActive;
 
   if (!name || !price) { showToast('⚠ NOMBRE Y PRECIO REQUERIDOS', 'red'); return; }
 
   const newP = { id: Date.now(), name, emoji, price, stock, initialStock: stock, isCombo: false, comboLines: [] };
+  if (contenido > 0) newP.contenido = contenido;
 
   if (isCombo) {
     const lines = getComboLines('New');
+    if (lines.invalid) { showToast('⚠ CARGÁ EL CONTENIDO (ML) DE ' + lines.invalid.toUpperCase() + ' PARA DESCONTAR EN ML', 'red'); return; }
     if (!lines.length) {
       showToast('⚠ SELECCIONÁ AL MENOS UN PRODUCTO BASE PARA EL COMBO', 'red');
       return;
@@ -2837,6 +3018,14 @@ function toggleEditProduct(id) {
   const form = document.getElementById('editform-' + id);
   if (!form) return;
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  // Combos: cargar sus componentes actuales en el editor
+  const p = products.find(x => x.id === id);
+  const box = document.getElementById('comboLinesE' + id);
+  if (p && p.isCombo && box && form.style.display === 'block') {
+    box.innerHTML = '';
+    (p.comboLines || []).forEach(l => addComboLine('E' + id, l));
+    if (!box.children.length) addComboLine('E' + id);
+  }
 }
 
 function saveEditProduct(id) {
@@ -2846,15 +3035,25 @@ function saveEditProduct(id) {
   const name = document.getElementById('ep-name-' + id).value.trim();
   const emoji = document.getElementById('ep-emoji-' + id).value.trim();
   const price = parseInt(document.getElementById('ep-price-' + id).value) || 0;
-  const initialStock = parseInt(document.getElementById('ep-stock-' + id).value) || 0;
+  const stockEl = document.getElementById('ep-stock-' + id);
+  const initialStock = stockEl ? round4(parseFloat(stockEl.value) || 0) : p.initialStock;
+  const contEl = document.getElementById('ep-cont-' + id);
 
   if (!name) { showToast('⚠ EL NOMBRE NO PUEDE ESTAR VACÍO', 'red'); return; }
   if (price < 0) { showToast('⚠ EL PRECIO NO PUEDE SER NEGATIVO', 'red'); return; }
+  let lines = null;
+  if (p.isCombo) {
+    lines = getComboLines('E' + id);
+    if (lines.invalid) { showToast('⚠ CARGÁ EL CONTENIDO (ML) DE ' + lines.invalid.toUpperCase() + ' PARA DESCONTAR EN ML', 'red'); return; }
+    if (!lines.length) { showToast('⚠ EL COMBO NECESITA AL MENOS UN PRODUCTO', 'red'); return; }
+  }
 
   p.name = name;
   p.emoji = emoji || '📦';
   p.price = price;
   p.initialStock = initialStock;
+  if (lines) p.comboLines = lines;
+  if (contEl) { const c = parseInt(contEl.value) || 0; if (c > 0) p.contenido = c; else delete p.contenido; }
 
   saveProducts();
   updateProductInFirebase(p);
@@ -2872,11 +3071,8 @@ function saveEditProduct(id) {
     if (metaEl) metaEl.innerHTML =
       '$' + p.price.toLocaleString('es-AR') +
       (p.isCombo
-        ? ' · COMBO · Descuenta: ' + (p.comboLines||[]).map(l => {
-            const base = products.find(x=>x.id===l.productId);
-            return (base?base.name:'?') + ' x' + l.qty;
-          }).join(' + ')
-        : ' · Stock: ' + p.stock + '/' + p.initialStock);
+        ? ' · COMBO · Descuenta: ' + comboText(p)
+        : ' · Stock: ' + fmtQty(p.stock) + '/' + fmtQty(p.initialStock) + (p.contenido ? ' · ' + p.contenido + ' ml c/u' : ''));
     // Close the edit form
     const form = document.getElementById('editform-' + id);
     if (form) form.style.display = 'none';

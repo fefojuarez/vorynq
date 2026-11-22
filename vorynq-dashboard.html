@@ -181,7 +181,7 @@ body.viewing .live-only{display:none !important;}
   <div class="top-bar">
     <div class="top-logo">VORY<span>NQ</span></div>
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div><span id="liveText">CONECTANDO</span></div>
-    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.10-c</div></div>
+    <div style="text-align:right;"><div class="top-time" id="lastUpdate">Conectando...</div><div class="top-time" style="color:var(--gray);">v2026.11.16-b</div></div>
   </div>
   <div class="view-banner" id="viewBanner"><span>📚 VIENDO HISTORIAL: <b id="viewName"></b> · los datos no cambian</span><button id="backLive">← VOLVER A EN VIVO</button></div>
   <div class="body">
@@ -283,6 +283,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const fmt = n => '$'+(n||0).toLocaleString('es-AR');
+const fmtQ = n => (Math.round((Number(n)||0)*100)/100).toLocaleString('es-AR',{maximumFractionDigits:2});
 const PAGOS = { efectivo:'Efectivo', mercadopago:'Mercado Pago', tarjeta:'Tarjeta', organizador:'Organizador' };
 const pagoKey = s => s.organizer ? 'organizador' : (s.paymentMethod || 'efectivo');
 const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -430,7 +431,7 @@ function renderStock(){
       const pct = p.initialStock>0 ? Math.max(0,Math.min(100,Math.round(p.stock/p.initialStock*100))) : 100;
       const s = p.stock<=0||pct<=10 ? 'critical' : pct<=25 ? 'low' : 'ok';
       const label = p.stock<=0 ? '✕ AGOTADO' : pct<=10 ? '⚠ CRÍTICO' : pct<=25 ? '↓ BAJO' : '✓ OK';
-      return `<div class="stock-card ${s}"><div class="stock-emoji">${esc(p.emoji||'📦')}</div><div class="stock-info"><div class="stock-name">${esc(p.name)}</div><div class="stock-nums">${p.stock} / ${p.initialStock}</div><div class="stock-track"><div class="stock-fill ${s}" style="width:${pct}%"></div></div><div class="stock-meta"><span class="stock-status ${s}">${label}</span><span>${Math.max(0,p.initialStock-p.stock)} vendidos</span></div></div></div>`;
+      return `<div class="stock-card ${s}"><div class="stock-emoji">${esc(p.emoji||'📦')}</div><div class="stock-info"><div class="stock-name">${esc(p.name)}</div><div class="stock-nums">${fmtQ(p.stock)} / ${fmtQ(p.initialStock)}</div><div class="stock-track"><div class="stock-fill ${s}" style="width:${pct}%"></div></div><div class="stock-meta"><span class="stock-status ${s}">${label}</span><span>${fmtQ(Math.max(0,p.initialStock-p.stock))} vendidos</span></div></div></div>`;
     }).join('');
 }
 
@@ -511,7 +512,7 @@ function buildExport(){
   const productos=[['Producto','Unidades vendidas','Unidades org.','Recaudado','Stock actual','Stock inicial']];
   productStats().forEach(x=>{
     const p=stockByName[x.name];
-    productos.push([x.name,x.units,x.org,x.money,p&&!p.isCombo?p.stock:'',p&&!p.isCombo?p.initialStock:'']);
+    productos.push([x.name,x.units,x.org,x.money,p&&!p.isCombo?Math.round(p.stock*100)/100:'',p&&!p.isCombo?p.initialStock:'']);
   });
   return {ventas,retiros,cierre,productos,count:sales.length};
 }
