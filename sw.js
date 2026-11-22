@@ -1,8 +1,8 @@
-// VORYNQ — Service worker: permite abrir el sistema sin internet.
+// UNDERHERTZ — Service worker: permite abrir el sistema sin internet.
 // Páginas: primero intenta internet (para recibir siempre la última versión) y si no hay, usa la copia guardada.
 // Librerías (Firebase, Excel, fuentes): usa la copia guardada y la actualiza cuando hay internet.
-const CACHE = 'vorynq-v2026.11.21';
-const PAGES = ['./', './index.html', './vorynq-dashboard.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'underhertz-v2026.11.22';
+const PAGES = ['./', './index.html', './underhertz-dashboard.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const LIBS = [
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js',
@@ -20,7 +20,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith('vorynq-') && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => (k.startsWith('vorynq-') || k.startsWith('underhertz-')) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

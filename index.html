@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>VORYNQ — Sistema de Barra</title>
+<title>UNDERHERTZ — Sistema de Barra</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#08080E">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -740,7 +740,7 @@ body {
 <div id="setupScreen">
   <div class="setup-box">
     <div class="setup-top">
-      <div class="setup-logo">VORYNQ BARRA</div>
+      <div class="setup-logo">UNDERHERTZ BARRA</div>
       <div class="setup-subtitle">Sistema de punto de venta</div>
     </div>
     <div class="setup-body">
@@ -754,7 +754,7 @@ body {
       <div id="setupPinHint" style="display:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--gray-light);margin:4px 0 12px;">🔒 Al ingresar se te pide tu PIN personal</div>
 
       <div class="firebase-note" id="setupConn">⏳ CONECTANDO CON EL SERVIDOR…</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.21</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--gray);text-align:right;margin-top:6px;">VERSIÓN v2026.11.22</div>
 
       <button class="setup-btn" style="margin-top:16px;" onclick="startSession()">INGRESAR AL SISTEMA →</button>
     </div>
@@ -764,9 +764,9 @@ body {
 <!-- ══ TOP BAR ══ -->
 <div id="topBar" style="display:none;">
   <div style="display:flex;align-items:center;gap:10px;">
-    <div class="top-logo">VQ<span>.</span></div>
+    <div class="top-logo">UH<span>.</span></div>
     <div class="top-barra" id="topBarraName">BARRA 1</div>
-    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.21</div>
+    <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--gray);white-space:nowrap;" title="Versión del sistema">v2026.11.22</div>
   </div>
   <div class="top-event" id="topEventName">—</div>
   <div style="display:flex;align-items:center;gap:12px;">
@@ -903,7 +903,7 @@ body {
 // ═══════════════════════════════════════════════
 // MIGRACIÓN DE DATOS LOCALES
 // El sistema original (BarraUnder) usa el mismo dominio y las claves 'uh_'.
-// VORYNQ usa claves propias 'vq_' para no mezclar datos. La primera vez copia
+// Este sistema usa claves propias 'vq_' para no mezclar datos.
 // solo la configuración (PINs, evento, productos), nunca las ventas.
 // ═══════════════════════════════════════════════
 try {
@@ -922,7 +922,7 @@ try {
 let SESSION = {
   barra: '',
   operador: '',
-  eventName: 'VORYNQ',
+  eventName: 'UNDERHERTZ',
   eventDate: '',
   eventLocation: 'Aquelarre · General Roca',
   organizers: ['Organizador 1', 'Organizador 2'],
@@ -1280,7 +1280,7 @@ let products = JSON.parse(localStorage.getItem('vq_products') || 'null') || [
   { id:2, name:'Fernet', emoji:'🥃', price:3500, stock:80, initialStock:80 },
   { id:3, name:'Agua', emoji:'💧', price:1000, stock:150, initialStock:150 },
   { id:4, name:'Gaseosa', emoji:'🥤', price:1500, stock:120, initialStock:120 },
-  { id:5, name:'Vaso VQ', emoji:'🖤', price:2000, stock:200, initialStock:200 },
+  { id:5, name:'Vaso UH', emoji:'🖤', price:2000, stock:200, initialStock:200 },
   { id:6, name:'Shot', emoji:'🔥', price:1800, stock:60, initialStock:60 },
 ];
 
@@ -1315,7 +1315,7 @@ function enterSession(barra, user, nombre) {
   document.getElementById('topBarraName').textContent = barra.toUpperCase();
 
     const saved = JSON.parse(localStorage.getItem('vq_eventConfig') || '{}');
-    if (saved.eventName) SESSION.eventName = saved.eventName;
+    if (saved.eventName) SESSION.eventName = (saved.eventName === 'VORYNQ') ? 'UNDERHERTZ' : saved.eventName;
     if (saved.eventDate) SESSION.eventDate = saved.eventDate;
     if (saved.eventLocation) SESSION.eventLocation = saved.eventLocation;
     if (saved.organizers) SESSION.organizers = saved.organizers;
@@ -1554,8 +1554,8 @@ if (window._firebaseReady) watchConnection();
 else document.addEventListener('firebaseReady', watchConnection);
 setTimeout(renderConnStatus, 8000); // si el servidor no cargó en 8 s, mostrarlo
 
-// Copia productos, stock y configuración desde 'underhertz' a 'vorynq' la primera vez.
-// Las ventas y retiros NO se copian: VORYNQ arranca con su propio historial.
+// (Sin uso) Copiaba productos, stock y configuración desde el sistema original la primera vez.
+// Las ventas y retiros NO se copian.
 let _migrating = false;
 async function migrateFromOriginal() {
   if (_migrating || !window._firebaseReady) return;
@@ -1577,7 +1577,7 @@ async function migrateFromOriginal() {
       const keep = {};
       ['adminPin', 'operadorPin', 'lowStock'].forEach(k => { if (cfg[k] !== undefined) keep[k] = cfg[k]; });
       if (Object.keys(keep).length) await window._update(r(db, 'vorynq/config'), keep);
-      showToast('✓ PRODUCTOS COPIADOS A LA BASE VORYNQ', 'green');
+      showToast('✓ PRODUCTOS COPIADOS', 'green');
     } else {
       pushProductsToFirebase();
       pushStockToFirebase();
@@ -2025,7 +2025,7 @@ function printTicket(sale) {
   const ticketsHTML = units.map((u, idx) => `
     <div class="ticket-single">
       <div class="ticket-header">
-        <div class="ticket-logo">VORYNQ®</div>
+        <div class="ticket-logo">UNDERHERTZ®</div>
         <div class="ticket-event">${SESSION.eventName}</div>
         <div class="ticket-meta">${SESSION.eventDate ? SESSION.eventDate + ' · ' : ''}${SESSION.eventLocation}</div>
       </div>
@@ -2255,7 +2255,7 @@ async function downloadCartaTemplate() {
     ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 44 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Carta');
-    XLSX.writeFile(wb, 'carta-vorynq.xlsx');
+    XLSX.writeFile(wb, 'carta-underhertz.xlsx');
     showToast('✓ PLANTILLA DESCARGADA', 'green');
   } catch (e) {
     showToast('⚠ ' + e.message.toUpperCase(), 'red');
@@ -2783,7 +2783,7 @@ function printCierre() {
   const row = (k, v) => '<div class="ticket-item"><span>' + k + '</span><span>' + v + '</span></div>';
   document.getElementById('printArea').innerHTML =
     '<div class="ticket-header">' +
-    '<div class="ticket-logo">VORYNQ®</div>' +
+    '<div class="ticket-logo">UNDERHERTZ®</div>' +
     '<div class="ticket-event">CIERRE DE CAJA</div>' +
     '<div class="ticket-meta">' + d.barra + ' · ' + d.dateStr + ' · ' + d.timeStr + '</div>' +
     '<div class="ticket-meta">Cajero: ' + SESSION.operador + '</div>' +
@@ -3260,7 +3260,7 @@ function renderAdminPanel(el) {
 }
 
 function saveEventConfig() {
-  SESSION.eventName = document.getElementById('cfgName').value.trim() || 'VORYNQ';
+  SESSION.eventName = document.getElementById('cfgName').value.trim() || 'UNDERHERTZ';
   SESSION.eventDate = document.getElementById('cfgDate').value.trim();
   SESSION.eventLocation = document.getElementById('cfgLocation').value.trim();
   SESSION.organizers = document.getElementById('cfgOrgs').value.split(',').map(s => s.trim()).filter(Boolean);
